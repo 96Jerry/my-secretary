@@ -15,13 +15,27 @@ import {
 
 import { EnvironmentVariables } from '../../config';
 import { FridgeService } from '../../modules/fridge/service/fridge.service';
+import { HealthService } from '../../modules/health/service/health.service';
+import { PreferenceService } from '../../modules/preference/service/preference.service';
+import { ScheduleService } from '../../modules/schedule/service/schedule.service';
 import { UserService } from '../../modules/user/service/user.service';
-import { FridgeItem, IntentParserService } from './intent-parser.service';
+import {
+  FridgeItem,
+  IntentContext,
+  IntentParserService,
+  ParsedIntent,
+} from './intent-parser.service';
 
-interface PendingFridgeUpdate {
-  items: FridgeItem[];
-  summary: string;
-}
+type PendingUpdate =
+  | { kind: 'fridge'; items: FridgeItem[]; summary: string }
+  | { kind: 'health'; data: Record<string, unknown>; summary: string }
+  | { kind: 'preference'; data: Record<string, unknown>; summary: string }
+  | {
+      kind: 'schedule';
+      date: string;
+      data: Record<string, unknown>;
+      summary: string;
+    };
 
 const CHANNEL_NAME = 'daily-meal-plan';
 const WELCOME =
@@ -36,12 +50,15 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(DiscordService.name);
   private client!: Client;
   private readonly botChannelByGuild = new Map<string, string>();
-  private readonly pendingByGuild = new Map<string, PendingFridgeUpdate>();
+  private readonly pendingByGuild = new Map<string, PendingUpdate>();
 
   constructor(
     private readonly env: EnvironmentVariables,
-    private readonly fridgeService: FridgeService,
     private readonly userService: UserService,
+    private readonly fridgeService: FridgeService,
+    private readonly healthService: HealthService,
+    private readonly preferenceService: PreferenceService,
+    private readonly scheduleService: ScheduleService,
     private readonly intentParser: IntentParserService,
   ) {}
 
@@ -56,7 +73,6 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
 
     this.client.once('clientReady', (c) => {
       this.logger.log(`Discord 봇 로그인: ${c.user.tag}`);
-      // 재시작 시 기존 채널만 등록 (새로 만들지 않음)
       for (const guild of c.guilds.cache.values()) {
         const ch = findBotChannel(guild);
         if (ch) {
@@ -119,7 +135,6 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async onGuildJoined(guild: Guild): Promise<void> {
-    // 길드 가입 즉시 사용자 프로비저닝 (식별자 = guild.id, 이름 = 길드명)
     await this.userService.findOrCreateByGuildId(guild.id, guild.name);
 
     let channel = findBotChannel(guild);
@@ -148,7 +163,6 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     const text = msg.content.trim();
     if (!text) return;
 
-    // 봇 오프라인 중 가입 등으로 사용자가 없으면 lazy 생성
     const user = await this.userService.findOrCreateByGuildId(
       guildId,
       msg.guild?.name ?? null,
@@ -157,9 +171,9 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     const pending = this.pendingByGuild.get(guildId);
     if (pending) {
       if (AFFIRMATIVE.test(text)) {
-        await this.fridgeService.upsert(user.id, { items: pending.items });
+        await this.applyPending(user.id, pending);
         this.pendingByGuild.delete(guildId);
-        await msg.reply('냉장고 업데이트 완료.');
+        await msg.reply(confirmedMessage(pending));
         return;
       }
       if (NEGATIVE.test(text)) {
@@ -171,27 +185,114 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       this.pendingByGuild.delete(guildId);
     }
 
-    const fridge = await this.fridgeService.getLatest(user.id);
-    const currentItems = readItems(fridge?.data);
+    const today = todayIso();
+    const [fridge, health, preference, schedule] = await Promise.all([
+      this.fridgeService.getLatest(user.id),
+      this.healthService.getLatest(user.id),
+      this.preferenceService.getLatest(user.id),
+      this.scheduleService.getForDate(user.id, today),
+    ]);
 
-    const parsed = await this.intentParser.parse(text, currentItems);
+    const ctx: IntentContext = {
+      today,
+      fridge: { items: readItems(fridge?.data) },
+      health: health?.data ?? null,
+      preference: preference?.data ?? null,
+      schedule: schedule?.data ?? null,
+    };
 
-    if (parsed.intent !== 'update_fridge' || !parsed.items?.length) {
-      await msg.reply('지금은 냉장고 재고 업데이트만 가능합니다.');
+    const parsed = await this.intentParser.parse(text, ctx);
+
+    if (parsed.intent === 'other') {
+      await msg.reply('냉장고, 건강, 선호, 일정 업데이트만 가능합니다.');
       return;
     }
 
-    this.pendingByGuild.set(guildId, {
-      items: parsed.items,
-      summary: parsed.summary ?? '',
-    });
+    const next = toPending(parsed);
+    if (!next) {
+      await msg.reply('처리할 변경 내용이 없습니다.');
+      return;
+    }
+
+    this.pendingByGuild.set(guildId, next);
     await msg.reply(
-      [
-        '이대로 업데이트할까요? (예/아니오)',
-        parsed.summary || '(요약 없음)',
-      ].join('\n'),
+      [askQuestion(next), next.summary || '(요약 없음)'].join('\n'),
     );
   }
+
+  private async applyPending(userId: string, p: PendingUpdate): Promise<void> {
+    switch (p.kind) {
+      case 'fridge':
+        await this.fridgeService.upsert(userId, { items: p.items });
+        return;
+      case 'health':
+        await this.healthService.upsert(userId, p.data);
+        return;
+      case 'preference':
+        await this.preferenceService.upsert(userId, p.data);
+        return;
+      case 'schedule':
+        await this.scheduleService.upsert(userId, p.date, p.data);
+        return;
+    }
+  }
+}
+
+function toPending(parsed: ParsedIntent): PendingUpdate | null {
+  switch (parsed.intent) {
+    case 'update_fridge':
+      return parsed.items.length === 0
+        ? null
+        : { kind: 'fridge', items: parsed.items, summary: parsed.summary };
+    case 'update_health':
+      return Object.keys(parsed.data).length === 0
+        ? null
+        : { kind: 'health', data: parsed.data, summary: parsed.summary };
+    case 'update_preference':
+      return Object.keys(parsed.data).length === 0
+        ? null
+        : { kind: 'preference', data: parsed.data, summary: parsed.summary };
+    case 'update_schedule':
+      if (!parsed.date || Object.keys(parsed.data).length === 0) return null;
+      return {
+        kind: 'schedule',
+        date: parsed.date,
+        data: parsed.data,
+        summary: parsed.summary,
+      };
+    case 'other':
+      return null;
+  }
+}
+
+function askQuestion(p: PendingUpdate): string {
+  switch (p.kind) {
+    case 'fridge':
+      return '냉장고 업데이트할까요? (예/아니오)';
+    case 'health':
+      return '건강 정보 업데이트할까요? (예/아니오)';
+    case 'preference':
+      return '선호 업데이트할까요? (예/아니오)';
+    case 'schedule':
+      return `일정(${p.date}) 업데이트할까요? (예/아니오)`;
+  }
+}
+
+function confirmedMessage(p: PendingUpdate): string {
+  switch (p.kind) {
+    case 'fridge':
+      return '냉장고 업데이트 완료.';
+    case 'health':
+      return '건강 정보 업데이트 완료.';
+    case 'preference':
+      return '선호 업데이트 완료.';
+    case 'schedule':
+      return `일정(${p.date}) 업데이트 완료.`;
+  }
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function findBotChannel(guild: Guild): TextChannel | undefined {
