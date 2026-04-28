@@ -18,6 +18,7 @@ import { FridgeService } from '../../modules/fridge/service/fridge.service';
 import { HealthService } from '../../modules/health/service/health.service';
 import { PreferenceService } from '../../modules/preference/service/preference.service';
 import { ScheduleService } from '../../modules/schedule/service/schedule.service';
+import { User } from '../../modules/user/domain/user.entity';
 import { UserService } from '../../modules/user/service/user.service';
 import {
   FridgeItem,
@@ -57,6 +58,13 @@ const PROMPTS: Record<Category, string> = {
     '식사 선호를 알려주세요. 예: `한식과 일식 좋아함, 배달은 교촌, 외식 가능`',
   schedule:
     '오늘 일정을 알려주세요 (수면, 약속, 운동). 예: `7시 기상 23시 취침, 14시 회의, 저녁 7시 운동`',
+};
+
+const CATEGORY_LABEL: Record<Category, string> = {
+  fridge: '냉장고',
+  health: '건강',
+  preference: '선호',
+  schedule: '일정',
 };
 
 const AFFIRMATIVE =
@@ -278,7 +286,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async findNextMissing(userId: string): Promise<Category | null> {
+  private async findMissingCategories(userId: string): Promise<Category[]> {
     const today = todayIso();
     const [fridge, health, preference, schedule] = await Promise.all([
       this.fridgeService.getLatest(userId),
@@ -286,11 +294,49 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       this.preferenceService.getLatest(userId),
       this.scheduleService.getForDate(userId, today),
     ]);
-    if (!fridge) return 'fridge';
-    if (!health) return 'health';
-    if (!preference) return 'preference';
-    if (!schedule) return 'schedule';
-    return null;
+    const missing: Category[] = [];
+    if (!fridge) missing.push('fridge');
+    if (!health) missing.push('health');
+    if (!preference) missing.push('preference');
+    if (!schedule) missing.push('schedule');
+    return missing;
+  }
+
+  private async findNextMissing(userId: string): Promise<Category | null> {
+    const missing = await this.findMissingCategories(userId);
+    return missing[0] ?? null;
+  }
+
+  /**
+   * cron에서 호출. 사용자의 비어 있는 카테고리가 있으면 해당 길드 봇 채널로
+   * 입력 요청 메시지를 발송. 채널 미등록 시 경고 로그 남기고 스킵.
+   */
+  async notifyIfMissingSettings(user: User): Promise<void> {
+    if (!user.guildId) return;
+
+    const missing = await this.findMissingCategories(user.id);
+    if (missing.length === 0) return;
+
+    const channelId = this.botChannelByGuild.get(user.guildId);
+    if (!channelId) {
+      this.logger.warn(
+        `사용자 ${user.id} (guild ${user.guildId}): 봇 채널 미등록 — 알림 스킵`,
+      );
+      return;
+    }
+
+    const channel = this.client.channels.cache.get(channelId);
+    if (!channel || !channel.isTextBased() || !channel.isSendable()) {
+      this.logger.warn(
+        `채널 ${channelId} 발송 불가 — 알림 스킵`,
+      );
+      return;
+    }
+
+    const labels = missing.map((c) => CATEGORY_LABEL[c]).join(', ');
+    await channel.send(
+      `오늘 식단 생성에 ${labels} 정보가 필요합니다. 채널에 입력해주세요.`,
+    );
   }
 
   private async tailFor(

@@ -3,6 +3,8 @@ import { Cron } from '@nestjs/schedule';
 
 import { env, EnvironmentVariables } from '../../../config';
 import { MealPlanService } from '../../../modules/meal-plan/service/meal-plan.service';
+import { UserService } from '../../../modules/user/service/user.service';
+import { DiscordService } from '../../discord/discord.service';
 
 @Injectable()
 export class DailyMealPlanJob {
@@ -11,12 +13,29 @@ export class DailyMealPlanJob {
   constructor(
     private readonly envVars: EnvironmentVariables,
     private readonly mealPlanService: MealPlanService,
+    private readonly userService: UserService,
+    private readonly discordService: DiscordService,
   ) {}
 
   @Cron(env.MEAL_PLAN_CRON, { name: 'daily-meal-plan' })
   async run(): Promise<void> {
     const recipient = this.envVars.MEAL_PLAN_RECIPIENT;
-    this.logger.log(`Generating and sending daily meal plan to ${recipient}`);
-    await this.mealPlanService.generateAndSendDailyPlan(recipient);
+    this.logger.log(`이메일 식단 발송 시작: ${recipient}`);
+    try {
+      await this.mealPlanService.generateAndSendDailyPlan(recipient);
+    } catch (e) {
+      this.logger.error(
+        `이메일 식단 발송 실패: ${(e as Error).message}`,
+        (e as Error).stack,
+      );
+    }
+
+    const discordUsers = await this.userService.findAllWithGuildId();
+    this.logger.log(
+      `Discord 사용자 ${discordUsers.length}명 미설정 검사 시작`,
+    );
+    await Promise.allSettled(
+      discordUsers.map((u) => this.discordService.notifyIfMissingSettings(u)),
+    );
   }
 }

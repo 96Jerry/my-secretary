@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 
 import { User } from '../domain/user.entity';
 import { UserRepository } from '../domain/user.repository';
@@ -26,6 +26,11 @@ export class UserTypeormRepository implements UserRepository {
   async findByGuildId(guildId: string): Promise<User | null> {
     const row = await this.repo.findOne({ where: { guildId } });
     return row ? this.toDomain(row) : null;
+  }
+
+  async findAllWithGuildId(): Promise<User[]> {
+    const rows = await this.repo.find({ where: { guildId: Not(IsNull()) } });
+    return rows.map((r) => this.toDomain(r));
   }
 
   async create(input: {

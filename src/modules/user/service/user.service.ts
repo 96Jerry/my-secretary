@@ -23,6 +23,10 @@ export class UserService {
     return this.userRepository.findByEmail(email);
   }
 
+  findAllWithGuildId(): Promise<User[]> {
+    return this.userRepository.findAllWithGuildId();
+  }
+
   async findOrCreateByGuildId(
     guildId: string,
     name: string | null,

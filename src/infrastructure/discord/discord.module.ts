@@ -19,5 +19,6 @@ import { IntentParserService } from './intent-parser.service';
     UserModule,
   ],
   providers: [DiscordService, IntentParserService],
+  exports: [DiscordService],
 })
 export class DiscordModule {}
