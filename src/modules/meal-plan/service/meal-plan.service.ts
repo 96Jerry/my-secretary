@@ -22,11 +22,10 @@ export class MealPlanService {
   ) {}
 
   async getForDate(userId: string, date: string): Promise<MealPlan> {
-    // const plan = await this.mealPlanRepository.findByUserAndDate(userId, date);
-    // if (!plan)
-    //   throw new NotFoundException(`No meal plan for ${userId} on ${date}`);
-    // return plan;
-    return Promise.resolve(stubPlan(userId, date, '(stub) 저장된 식단 없음'));
+    const plan = await this.mealPlanRepository.findByUserAndDate(userId, date);
+    if (!plan)
+      throw new NotFoundException(`No meal plan for ${userId} on ${date}`);
+    return plan;
   }
 
   async generateAndSendDailyPlan(recipientEmail: string): Promise<MealPlan> {
@@ -40,8 +39,7 @@ export class MealPlanService {
     const user = await this.userService.findById(userId);
     const date = today();
     const content = await this.generator.generate(user.id, date);
-    // const plan = await this.mealPlanRepository.save(user.id, date, content);
-    const plan = stubPlan(user.id, date, content);
+    const plan = await this.mealPlanRepository.save(user.id, date, content);
 
     await this.mailService.send({
       to: user.email,
@@ -51,12 +49,6 @@ export class MealPlanService {
     this.logger.log(`Meal plan ${plan.id} sent to ${user.email}`);
     return plan;
   }
-}
-
-const STUB_ID = '00000000-0000-0000-0000-000000000050';
-
-function stubPlan(userId: string, date: string, content: string): MealPlan {
-  return new MealPlan(STUB_ID, userId, date, content, new Date());
 }
 
 function today(): string {

@@ -14,35 +14,13 @@ export class FridgeService {
   ) {}
 
   getLatest(userId: string): Promise<FridgeSnapshot | null> {
-    // return this.fridgeRepository.findLatestByUserId(userId);
-    return Promise.resolve(defaultFridge(userId));
+    return this.fridgeRepository.findLatestByUserId(userId);
   }
 
   upsert(
     userId: string,
     data: Record<string, unknown>,
   ): Promise<FridgeSnapshot> {
-    // return this.fridgeRepository.upsert(userId, data);
-    return Promise.resolve(
-      new FridgeSnapshot(STUB_ID, userId, data, new Date()),
-    );
+    return this.fridgeRepository.upsert(userId, data);
   }
-}
-
-const STUB_ID = '00000000-0000-0000-0000-000000000010';
-
-function defaultFridge(userId: string): FridgeSnapshot {
-  return new FridgeSnapshot(
-    STUB_ID,
-    userId,
-    {
-      items: [
-        { name: '닭가슴살', quantity: '800g' },
-        { name: '계란', quantity: 10 },
-        { name: '3분 카레', quantity: 10 },
-        { name: '햇반', quantity: 10 },
-      ],
-    },
-    new Date(),
-  );
 }
