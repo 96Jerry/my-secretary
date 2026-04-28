@@ -55,7 +55,7 @@ export class EnvironmentVariables {
   DB_LOGGING: boolean = false;
 
   @IsString()
-  ANTHROPIC_API_KEY!: string;
+  CLAUDE_CODE_OAUTH_TOKEN!: string;
 
   @IsString()
   @IsOptional()
