@@ -37,6 +37,11 @@ export class MealPlanService {
 
   async generateAndSendForUserId(userId: string): Promise<MealPlan> {
     const user = await this.userService.findById(userId);
+    if (!user.email) {
+      throw new NotFoundException(
+        `User ${user.id} has no email; cannot send meal plan`,
+      );
+    }
     const date = today();
     const content = await this.generator.generate(user.id, date);
     const plan = await this.mealPlanRepository.save(user.id, date, content);

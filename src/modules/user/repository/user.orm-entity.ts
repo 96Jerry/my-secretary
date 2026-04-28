@@ -11,11 +11,14 @@ export class UserOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ unique: true })
-  email!: string;
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  email!: string | null;
 
-  @Column()
-  name!: string;
+  @Column({ type: 'varchar', nullable: true })
+  name!: string | null;
+
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  guildId!: string | null;
 
   @CreateDateColumn()
   createdAt!: Date;

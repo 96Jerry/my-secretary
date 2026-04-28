@@ -23,16 +23,23 @@ export class UserTypeormRepository implements UserRepository {
     return row ? this.toDomain(row) : null;
   }
 
-  async save(user: User): Promise<User> {
+  async findByGuildId(guildId: string): Promise<User | null> {
+    const row = await this.repo.findOne({ where: { guildId } });
+    return row ? this.toDomain(row) : null;
+  }
+
+  async create(input: {
+    guildId: string;
+    name: string | null;
+  }): Promise<User> {
     const saved = await this.repo.save({
-      id: user.id,
-      email: user.email,
-      name: user.name,
+      guildId: input.guildId,
+      name: input.name,
     });
     return this.toDomain(saved);
   }
 
   private toDomain(row: UserOrmEntity): User {
-    return new User(row.id, row.email, row.name);
+    return new User(row.id, row.email, row.name, row.guildId);
   }
 }

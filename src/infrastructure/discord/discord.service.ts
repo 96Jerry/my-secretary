@@ -15,6 +15,7 @@ import {
 
 import { EnvironmentVariables } from '../../config';
 import { FridgeService } from '../../modules/fridge/service/fridge.service';
+import { UserService } from '../../modules/user/service/user.service';
 import { FridgeItem, IntentParserService } from './intent-parser.service';
 
 interface PendingFridgeUpdate {
@@ -24,7 +25,7 @@ interface PendingFridgeUpdate {
 
 const CHANNEL_NAME = 'daily-meal-plan';
 const WELCOME =
-  "안녕하세요. 이 채널에서 냉장고 업데이트 요청을 받습니다. 예: '닭가슴살 200g 추가해줘'";
+  '안녕하세요. 시작하려면 지금 냉장고에 있는 식재료를 알려주세요. 예: `닭가슴살 800g, 계란 10개, 양파 2개`';
 
 const AFFIRMATIVE =
   /^(예|네|응|어|ㅇㅇ|맞아|맞음|좋아|좋습니다|ok|yes|y)\s*[.!]*$/i;
@@ -40,6 +41,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly env: EnvironmentVariables,
     private readonly fridgeService: FridgeService,
+    private readonly userService: UserService,
     private readonly intentParser: IntentParserService,
   ) {}
 
@@ -117,6 +119,9 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async onGuildJoined(guild: Guild): Promise<void> {
+    // 길드 가입 즉시 사용자 프로비저닝 (식별자 = guild.id, 이름 = 길드명)
+    await this.userService.findOrCreateByGuildId(guild.id, guild.name);
+
     let channel = findBotChannel(guild);
     if (channel) {
       this.logger.log(`길드 ${guild.name}: 기존 #${channel.name} 재사용`);
@@ -143,10 +148,16 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     const text = msg.content.trim();
     if (!text) return;
 
+    // 봇 오프라인 중 가입 등으로 사용자가 없으면 lazy 생성
+    const user = await this.userService.findOrCreateByGuildId(
+      guildId,
+      msg.guild?.name ?? null,
+    );
+
     const pending = this.pendingByGuild.get(guildId);
     if (pending) {
       if (AFFIRMATIVE.test(text)) {
-        await this.fridgeService.upsert(guildId, { items: pending.items });
+        await this.fridgeService.upsert(user.id, { items: pending.items });
         this.pendingByGuild.delete(guildId);
         await msg.reply('냉장고 업데이트 완료.');
         return;
@@ -160,7 +171,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       this.pendingByGuild.delete(guildId);
     }
 
-    const fridge = await this.fridgeService.getLatest(guildId);
+    const fridge = await this.fridgeService.getLatest(user.id);
     const currentItems = readItems(fridge?.data);
 
     const parsed = await this.intentParser.parse(text, currentItems);

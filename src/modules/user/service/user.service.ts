@@ -22,4 +22,13 @@ export class UserService {
   findByEmail(email: string): Promise<User | null> {
     return this.userRepository.findByEmail(email);
   }
+
+  async findOrCreateByGuildId(
+    guildId: string,
+    name: string | null,
+  ): Promise<User> {
+    const existing = await this.userRepository.findByGuildId(guildId);
+    if (existing) return existing;
+    return this.userRepository.create({ guildId, name });
+  }
 }
