@@ -26,6 +26,8 @@ import {
   ParsedIntent,
 } from './intent-parser.service';
 
+type Category = 'fridge' | 'health' | 'preference' | 'schedule';
+
 type PendingUpdate =
   | { kind: 'fridge'; items: FridgeItem[]; summary: string }
   | { kind: 'health'; data: Record<string, unknown>; summary: string }
@@ -38,8 +40,24 @@ type PendingUpdate =
     };
 
 const CHANNEL_NAME = 'daily-meal-plan';
-const WELCOME =
-  '안녕하세요. 시작하려면 지금 냉장고에 있는 식재료를 알려주세요. 예: `닭가슴살 800g, 계란 10개, 양파 2개`';
+
+const WELCOME_INTRO =
+  '안녕하세요. 시작하려면 4개 정보(냉장고, 건강, 선호, 일정)를 알려주세요. 자유 순서로 보내셔도 됩니다.';
+const WELCOME_RETURNING =
+  '안녕하세요. 다시 만났네요. 자유롭게 업데이트 요청해 주세요.';
+const ONBOARDING_DONE =
+  '\n\n초기 설정 완료. 이제 자유롭게 업데이트 요청해 주세요.';
+
+const PROMPTS: Record<Category, string> = {
+  fridge:
+    '냉장고에 있는 식재료를 알려주세요. 예: `닭가슴살 800g, 계란 10개, 양파 2개`',
+  health:
+    '건강 정보를 알려주세요 (목표, 나이, 키, 체중, 알레르기). 예: `30살 남성, 168cm 65kg, 근성장 목표, 키위 알레르기`',
+  preference:
+    '식사 선호를 알려주세요. 예: `한식과 일식 좋아함, 배달은 교촌, 외식 가능`',
+  schedule:
+    '오늘 일정을 알려주세요 (수면, 약속, 운동). 예: `7시 기상 23시 취침, 14시 회의, 저녁 7시 운동`',
+};
 
 const AFFIRMATIVE =
   /^(예|네|응|어|ㅇㅇ|맞아|맞음|좋아|좋습니다|ok|yes|y)\s*[.!]*$/i;
@@ -106,7 +124,12 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       if (this.botChannelByGuild.has(ch.guild.id)) return;
       this.botChannelByGuild.set(ch.guild.id, ch.id);
       this.logger.log(`길드 ${ch.guild.name}: #${ch.name} 재생성 감지 — 활성`);
-      void ch.send(WELCOME).catch(() => {});
+      void this.sendDynamicWelcome(ch as TextChannel).catch((e) => {
+        this.logger.error(
+          `환영 메시지 발송 실패: ${(e as Error).message}`,
+          e,
+        );
+      });
     });
 
     this.client.on('channelDelete', (ch) => {
@@ -135,7 +158,10 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async onGuildJoined(guild: Guild): Promise<void> {
-    await this.userService.findOrCreateByGuildId(guild.id, guild.name);
+    const user = await this.userService.findOrCreateByGuildId(
+      guild.id,
+      guild.name,
+    );
 
     let channel = findBotChannel(guild);
     if (channel) {
@@ -149,7 +175,16 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`길드 ${guild.name}: #${channel.name} 생성`);
     }
     this.botChannelByGuild.set(guild.id, channel.id);
-    await channel.send(WELCOME);
+
+    await channel.send(await this.welcomeFor(user.id));
+  }
+
+  private async sendDynamicWelcome(channel: TextChannel): Promise<void> {
+    const user = await this.userService.findOrCreateByGuildId(
+      channel.guild.id,
+      channel.guild.name,
+    );
+    await channel.send(await this.welcomeFor(user.id));
   }
 
   private async handleMessage(msg: Message): Promise<void> {
@@ -171,9 +206,11 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     const pending = this.pendingByGuild.get(guildId);
     if (pending) {
       if (AFFIRMATIVE.test(text)) {
+        const wasIncomplete = (await this.findNextMissing(user.id)) !== null;
         await this.applyPending(user.id, pending);
         this.pendingByGuild.delete(guildId);
-        await msg.reply(confirmedMessage(pending));
+        const tail = await this.tailFor(user.id, wasIncomplete);
+        await msg.reply(`${confirmedMessage(pending)}${tail}`);
         return;
       }
       if (NEGATIVE.test(text)) {
@@ -204,13 +241,17 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     const parsed = await this.intentParser.parse(text, ctx);
 
     if (parsed.intent === 'other') {
-      await msg.reply('냉장고, 건강, 선호, 일정 업데이트만 가능합니다.');
+      const tail = await this.tailFor(user.id, false);
+      await msg.reply(
+        `냉장고, 건강, 선호, 일정 업데이트만 가능합니다.${tail}`,
+      );
       return;
     }
 
     const next = toPending(parsed);
     if (!next) {
-      await msg.reply('처리할 변경 내용이 없습니다.');
+      const tail = await this.tailFor(user.id, false);
+      await msg.reply(`처리할 변경 내용이 없습니다.${tail}`);
       return;
     }
 
@@ -235,6 +276,37 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
         await this.scheduleService.upsert(userId, p.date, p.data);
         return;
     }
+  }
+
+  private async findNextMissing(userId: string): Promise<Category | null> {
+    const today = todayIso();
+    const [fridge, health, preference, schedule] = await Promise.all([
+      this.fridgeService.getLatest(userId),
+      this.healthService.getLatest(userId),
+      this.preferenceService.getLatest(userId),
+      this.scheduleService.getForDate(userId, today),
+    ]);
+    if (!fridge) return 'fridge';
+    if (!health) return 'health';
+    if (!preference) return 'preference';
+    if (!schedule) return 'schedule';
+    return null;
+  }
+
+  private async tailFor(
+    userId: string,
+    wasIncomplete: boolean,
+  ): Promise<string> {
+    const next = await this.findNextMissing(userId);
+    if (next) return `\n\n다음으로 ${PROMPTS[next]}`;
+    if (wasIncomplete) return ONBOARDING_DONE;
+    return '';
+  }
+
+  private async welcomeFor(userId: string): Promise<string> {
+    const next = await this.findNextMissing(userId);
+    if (!next) return WELCOME_RETURNING;
+    return `${WELCOME_INTRO}\n\n먼저, ${PROMPTS[next]}`;
   }
 }
 
