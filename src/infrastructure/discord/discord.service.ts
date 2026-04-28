@@ -132,11 +132,8 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       if (this.botChannelByGuild.has(ch.guild.id)) return;
       this.botChannelByGuild.set(ch.guild.id, ch.id);
       this.logger.log(`길드 ${ch.guild.name}: #${ch.name} 재생성 감지 — 활성`);
-      void this.sendDynamicWelcome(ch as TextChannel).catch((e) => {
-        this.logger.error(
-          `환영 메시지 발송 실패: ${(e as Error).message}`,
-          e,
-        );
+      void this.sendDynamicWelcome(ch).catch((e) => {
+        this.logger.error(`환영 메시지 발송 실패: ${(e as Error).message}`, e);
       });
     });
 
@@ -250,9 +247,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
 
     if (parsed.intent === 'other') {
       const tail = await this.tailFor(user.id, false);
-      await msg.reply(
-        `냉장고, 건강, 선호, 일정 업데이트만 가능합니다.${tail}`,
-      );
+      await msg.reply(`냉장고, 건강, 선호, 일정 업데이트만 가능합니다.${tail}`);
       return;
     }
 
@@ -327,9 +322,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
 
     const channel = this.client.channels.cache.get(channelId);
     if (!channel || !channel.isTextBased() || !channel.isSendable()) {
-      this.logger.warn(
-        `채널 ${channelId} 발송 불가 — 알림 스킵`,
-      );
+      this.logger.warn(`채널 ${channelId} 발송 불가 — 알림 스킵`);
       return;
     }
 

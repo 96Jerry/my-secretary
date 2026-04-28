@@ -31,9 +31,7 @@ export class DailyMealPlanJob {
     }
 
     const discordUsers = await this.userService.findAllWithGuildId();
-    this.logger.log(
-      `Discord 사용자 ${discordUsers.length}명 미설정 검사 시작`,
-    );
+    this.logger.log(`Discord 사용자 ${discordUsers.length}명 미설정 검사 시작`);
     await Promise.allSettled(
       discordUsers.map((u) => this.discordService.notifyIfMissingSettings(u)),
     );

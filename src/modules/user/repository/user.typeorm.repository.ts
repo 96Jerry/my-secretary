@@ -33,10 +33,7 @@ export class UserTypeormRepository implements UserRepository {
     return rows.map((r) => this.toDomain(r));
   }
 
-  async create(input: {
-    guildId: string;
-    name: string | null;
-  }): Promise<User> {
+  async create(input: { guildId: string; name: string | null }): Promise<User> {
     const saved = await this.repo.save({
       guildId: input.guildId,
       name: input.name,
