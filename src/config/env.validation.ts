@@ -62,6 +62,9 @@ export class EnvironmentVariables {
   CLAUDE_MODEL: string = 'claude-opus-4-7';
 
   @IsString()
+  DISCORD_BOT_TOKEN!: string;
+
+  @IsString()
   MAIL_HOST!: string;
 
   @IsInt()

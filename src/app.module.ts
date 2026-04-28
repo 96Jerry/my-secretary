@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { EnvModule } from './config';
 import { ClaudeModule } from './infrastructure/claude/claude.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
+import { DiscordModule } from './infrastructure/discord/discord.module';
 import { MailModule } from './infrastructure/mail/mail.module';
 import { SchedulerModule } from './infrastructure/scheduler/scheduler.module';
 import { FridgeModule } from './modules/fridge/fridge.module';
@@ -20,6 +21,7 @@ import { UserModule } from './modules/user/user.module';
     DatabaseModule,
     ClaudeModule,
     MailModule,
+    DiscordModule,
     UserModule,
     FridgeModule,
     HealthModule,
