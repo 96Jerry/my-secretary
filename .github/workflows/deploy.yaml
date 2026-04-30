@@ -1,0 +1,73 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [main]
+
+# 동시 배포 방지 (이전 배포가 끝날 때까지 대기)
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: pnpm 설치
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Node.js 설정
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: 의존성 설치
+        run: pnpm install --frozen-lockfile
+
+      - name: 빌드
+        run: pnpm run build
+
+      - name: 배포 아티팩트 압축
+        run: |
+          tar -czf deploy.tar.gz \
+            dist \
+            package.json \
+            pnpm-lock.yaml \
+            ecosystem.config.json
+
+      - name: Lightsail로 아티팩트 전송
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          source: deploy.tar.gz
+          target: ~/app
+
+      - name: Lightsail에서 배포 실행
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            set -e
+            cd ~/app
+
+            # 압축 해제
+            tar -xzf deploy.tar.gz
+            rm deploy.tar.gz
+
+            # 운영 의존성만 설치 (lockfile 기준)
+            pnpm install --prod --frozen-lockfile
+
+            # PM2로 무중단 재시작 (없으면 새로 시작)
+            pm2 startOrReload ecosystem.config.json --update-env
+            pm2 save
