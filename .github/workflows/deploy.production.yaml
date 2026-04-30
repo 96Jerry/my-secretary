@@ -35,10 +35,14 @@ jobs:
       - name: 빌드
         run: pnpm run build
 
+      - name: 운영 의존성만 남기도록 재설치
+        run: pnpm install --prod --frozen-lockfile
+
       - name: 배포 아티팩트 압축
         run: |
           tar -czf deploy.tar.gz \
             dist \
+            node_modules \
             package.json \
             pnpm-lock.yaml \
             ecosystem.config.json
@@ -62,12 +66,9 @@ jobs:
             set -e
             cd ~/app
 
-            # 압축 해제
+            # 압축 해제 (node_modules 포함)
             tar -xzf deploy.tar.gz
             rm deploy.tar.gz
-
-            # 운영 의존성만 설치 (lockfile 기준)
-            pnpm install --prod --frozen-lockfile
 
             # PM2로 무중단 재시작 (없으면 새로 시작)
             pm2 startOrReload ecosystem.config.json --update-env
