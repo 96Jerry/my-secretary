@@ -54,6 +54,11 @@ export class EnvironmentVariables {
   @IsOptional()
   DB_LOGGING: boolean = false;
 
+  @Transform(toBoolean)
+  @IsBoolean()
+  @IsOptional()
+  DB_SSL: boolean = false;
+
   @IsString()
   CLAUDE_CODE_OAUTH_TOKEN!: string;
 

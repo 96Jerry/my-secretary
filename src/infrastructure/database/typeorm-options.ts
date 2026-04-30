@@ -12,6 +12,8 @@ export const buildTypeOrmOptions = (): DataSourceOptions => ({
   username: env.DB_USERNAME,
   password: env.DB_PASSWORD,
   database: env.DB_NAME,
+  // Neon은 정식 CA 인증서 사용. 로컬 PostgreSQL은 DB_SSL=false로 비활성.
+  ssl: env.DB_SSL ? { rejectUnauthorized: true } : false,
   synchronize: env.DB_SYNCHRONIZE,
   logging: env.DB_LOGGING,
   entities: [here + '/../../**/*.orm-entity.{ts,js}'],
