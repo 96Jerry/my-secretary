@@ -1,4 +1,4 @@
-import { FridgeSnapshot } from './fridge.entity';
+import { FridgeSnapshot } from './fridge.entity.js';
 
 export const FRIDGE_REPOSITORY = Symbol('FRIDGE_REPOSITORY');
 

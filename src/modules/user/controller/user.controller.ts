@@ -1,7 +1,7 @@
 import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 
-import { User } from '../domain/user.entity';
-import { UserService } from '../service/user.service';
+import { User } from '../domain/user.entity.js';
+import { UserService } from '../service/user.service.js';
 
 @Controller('users')
 export class UserController {

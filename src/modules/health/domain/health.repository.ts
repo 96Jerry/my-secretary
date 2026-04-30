@@ -1,4 +1,4 @@
-import { HealthProfile } from './health.entity';
+import { HealthProfile } from './health.entity.js';
 
 export const HEALTH_REPOSITORY = Symbol('HEALTH_REPOSITORY');
 

@@ -1,6 +1,9 @@
 import type { DataSourceOptions } from 'typeorm';
 
-import { env } from '../../config';
+import { env } from '../../config/index.js';
+
+// ESM에선 __dirname 미지원 → import.meta.dirname 사용 (Node 20.11+).
+const here = import.meta.dirname;
 
 export const buildTypeOrmOptions = (): DataSourceOptions => ({
   type: 'postgres',
@@ -11,6 +14,6 @@ export const buildTypeOrmOptions = (): DataSourceOptions => ({
   database: env.DB_NAME,
   synchronize: env.DB_SYNCHRONIZE,
   logging: env.DB_LOGGING,
-  entities: [__dirname + '/../../**/*.orm-entity.{ts,js}'],
-  migrations: [__dirname + '/migrations/*.{ts,js}'],
+  entities: [here + '/../../**/*.orm-entity.{ts,js}'],
+  migrations: [here + '/migrations/*.{ts,js}'],
 });

@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
-import { env, EnvironmentVariables } from '../../../config';
-import { MealPlanService } from '../../../modules/meal-plan/service/meal-plan.service';
-import { UserService } from '../../../modules/user/service/user.service';
-import { DiscordService } from '../../discord/discord.service';
+import { env, EnvironmentVariables } from '../../../config/index.js';
+import { MealPlanService } from '../../../modules/meal-plan/service/meal-plan.service.js';
+import { UserService } from '../../../modules/user/service/user.service.js';
+import { DiscordService } from '../../discord/discord.service.js';
 
 @Injectable()
 export class DailyMealPlanJob {

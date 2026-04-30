@@ -1,10 +1,10 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
-import { User } from '../domain/user.entity';
+import { User } from '../domain/user.entity.js';
 import {
   USER_REPOSITORY,
   type UserRepository,
-} from '../domain/user.repository';
+} from '../domain/user.repository.js';
 
 @Injectable()
 export class UserService {

@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 
-import { ClaudeService } from './claude.service';
+import { ClaudeService } from './claude.service.js';
 
 @Module({
   providers: [ClaudeService],

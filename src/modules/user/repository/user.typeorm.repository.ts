@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
 
-import { User } from '../domain/user.entity';
-import { UserRepository } from '../domain/user.repository';
-import { UserOrmEntity } from './user.orm-entity';
+import { User } from '../domain/user.entity.js';
+import { UserRepository } from '../domain/user.repository.js';
+import { UserOrmEntity } from './user.orm-entity.js';
 
 @Injectable()
 export class UserTypeormRepository implements UserRepository {

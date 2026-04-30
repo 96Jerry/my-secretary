@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { buildTypeOrmOptions } from './typeorm-options';
+import { buildTypeOrmOptions } from './typeorm-options.js';
 
 @Module({
   imports: [

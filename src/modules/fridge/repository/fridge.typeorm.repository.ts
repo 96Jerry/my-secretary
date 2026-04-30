@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { FridgeSnapshot } from '../domain/fridge.entity';
-import { FridgeRepository } from '../domain/fridge.repository';
-import { FridgeOrmEntity } from './fridge.orm-entity';
+import { FridgeSnapshot } from '../domain/fridge.entity.js';
+import { FridgeRepository } from '../domain/fridge.repository.js';
+import { FridgeOrmEntity } from './fridge.orm-entity.js';
 
 @Injectable()
 export class FridgeTypeormRepository implements FridgeRepository {

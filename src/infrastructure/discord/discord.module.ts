@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { FridgeModule } from '../../modules/fridge/fridge.module';
-import { HealthModule } from '../../modules/health/health.module';
-import { PreferenceModule } from '../../modules/preference/preference.module';
-import { ScheduleDomainModule } from '../../modules/schedule/schedule.module';
-import { UserModule } from '../../modules/user/user.module';
-import { ClaudeModule } from '../claude/claude.module';
-import { DiscordService } from './discord.service';
-import { IntentParserService } from './intent-parser.service';
+import { FridgeModule } from '../../modules/fridge/fridge.module.js';
+import { HealthModule } from '../../modules/health/health.module.js';
+import { PreferenceModule } from '../../modules/preference/preference.module.js';
+import { ScheduleDomainModule } from '../../modules/schedule/schedule.module.js';
+import { UserModule } from '../../modules/user/user.module.js';
+import { ClaudeModule } from '../claude/claude.module.js';
+import { DiscordService } from './discord.service.js';
+import { IntentParserService } from './intent-parser.service.js';
 
 @Module({
   imports: [

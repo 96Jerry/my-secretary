@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import { ClaudeService } from '../claude/claude.service';
+import { ClaudeService } from '../claude/claude.service.js';
 
 export interface FridgeItem {
   name: string;

@@ -1,7 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
-import { env } from './env';
-import { EnvironmentVariables } from './env.validation';
+import { env } from './env.js';
+import { EnvironmentVariables } from './env.validation.js';
 
 @Global()
 @Module({

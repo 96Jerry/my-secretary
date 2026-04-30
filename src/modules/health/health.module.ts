@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { HealthController } from './controller/health.controller';
-import { HEALTH_REPOSITORY } from './domain/health.repository';
-import { HealthOrmEntity } from './repository/health.orm-entity';
-import { HealthTypeormRepository } from './repository/health.typeorm.repository';
-import { HealthService } from './service/health.service';
+import { HealthController } from './controller/health.controller.js';
+import { HEALTH_REPOSITORY } from './domain/health.repository.js';
+import { HealthOrmEntity } from './repository/health.orm-entity.js';
+import { HealthTypeormRepository } from './repository/health.typeorm.repository.js';
+import { HealthService } from './service/health.service.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([HealthOrmEntity])],

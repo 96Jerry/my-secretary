@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createTransport, Transporter } from 'nodemailer';
 
-import { EnvironmentVariables } from '../../config';
+import { EnvironmentVariables } from '../../config/index.js';
 
 export interface SendMailOptions {
   to: string;

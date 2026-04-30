@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { Preference } from '../domain/preference.entity';
-import { PreferenceRepository } from '../domain/preference.repository';
-import { PreferenceOrmEntity } from './preference.orm-entity';
+import { Preference } from '../domain/preference.entity.js';
+import { PreferenceRepository } from '../domain/preference.repository.js';
+import { PreferenceOrmEntity } from './preference.orm-entity.js';
 
 @Injectable()
 export class PreferenceTypeormRepository implements PreferenceRepository {

@@ -1,13 +1,13 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import { MailService } from '../../../infrastructure/mail/mail.service';
-import { UserService } from '../../user/service/user.service';
-import { MealPlan } from '../domain/meal-plan.entity';
+import { MailService } from '../../../infrastructure/mail/mail.service.js';
+import { UserService } from '../../user/service/user.service.js';
+import { MealPlan } from '../domain/meal-plan.entity.js';
 import {
   MEAL_PLAN_REPOSITORY,
   type MealPlanRepository,
-} from '../domain/meal-plan.repository';
-import { MealPlanGeneratorService } from './meal-plan-generator.service';
+} from '../domain/meal-plan.repository.js';
+import { MealPlanGeneratorService } from './meal-plan-generator.service.js';
 
 @Injectable()
 export class MealPlanService {

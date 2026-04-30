@@ -1,18 +1,18 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import { EnvModule } from './config';
-import { ClaudeModule } from './infrastructure/claude/claude.module';
-import { DatabaseModule } from './infrastructure/database/database.module';
-import { DiscordModule } from './infrastructure/discord/discord.module';
-import { MailModule } from './infrastructure/mail/mail.module';
-import { SchedulerModule } from './infrastructure/scheduler/scheduler.module';
-import { FridgeModule } from './modules/fridge/fridge.module';
-import { HealthModule } from './modules/health/health.module';
-import { MealPlanModule } from './modules/meal-plan/meal-plan.module';
-import { PreferenceModule } from './modules/preference/preference.module';
-import { ScheduleDomainModule } from './modules/schedule/schedule.module';
-import { UserModule } from './modules/user/user.module';
+import { EnvModule } from './config/index.js';
+import { ClaudeModule } from './infrastructure/claude/claude.module.js';
+import { DatabaseModule } from './infrastructure/database/database.module.js';
+import { DiscordModule } from './infrastructure/discord/discord.module.js';
+import { MailModule } from './infrastructure/mail/mail.module.js';
+import { SchedulerModule } from './infrastructure/scheduler/scheduler.module.js';
+import { FridgeModule } from './modules/fridge/fridge.module.js';
+import { HealthModule } from './modules/health/health.module.js';
+import { MealPlanModule } from './modules/meal-plan/meal-plan.module.js';
+import { PreferenceModule } from './modules/preference/preference.module.js';
+import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
+import { UserModule } from './modules/user/user.module.js';
 
 @Module({
   imports: [

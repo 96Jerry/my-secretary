@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { ScheduleEntry } from '../domain/schedule.entity';
-import { ScheduleRepository } from '../domain/schedule.repository';
-import { ScheduleOrmEntity } from './schedule.orm-entity';
+import { ScheduleEntry } from '../domain/schedule.entity.js';
+import { ScheduleRepository } from '../domain/schedule.repository.js';
+import { ScheduleOrmEntity } from './schedule.orm-entity.js';
 
 @Injectable()
 export class ScheduleTypeormRepository implements ScheduleRepository {

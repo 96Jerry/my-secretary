@@ -1,4 +1,4 @@
-import { Preference } from './preference.entity';
+import { Preference } from './preference.entity.js';
 
 export const PREFERENCE_REPOSITORY = Symbol('PREFERENCE_REPOSITORY');
 

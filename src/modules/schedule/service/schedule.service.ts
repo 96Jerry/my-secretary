@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { ScheduleEntry } from '../domain/schedule.entity';
+import { ScheduleEntry } from '../domain/schedule.entity.js';
 import {
   SCHEDULE_REPOSITORY,
   type ScheduleRepository,
-} from '../domain/schedule.repository';
+} from '../domain/schedule.repository.js';
 
 @Injectable()
 export class ScheduleService {

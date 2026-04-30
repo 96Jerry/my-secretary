@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { Preference } from '../domain/preference.entity';
+import { Preference } from '../domain/preference.entity.js';
 import {
   PREFERENCE_REPOSITORY,
   type PreferenceRepository,
-} from '../domain/preference.repository';
+} from '../domain/preference.repository.js';
 
 @Injectable()
 export class PreferenceService {

@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { FridgeSnapshot } from '../domain/fridge.entity';
+import { FridgeSnapshot } from '../domain/fridge.entity.js';
 import {
   FRIDGE_REPOSITORY,
   type FridgeRepository,
-} from '../domain/fridge.repository';
+} from '../domain/fridge.repository.js';
 
 @Injectable()
 export class FridgeService {

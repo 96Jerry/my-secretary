@@ -7,8 +7,8 @@ import {
   Put,
 } from '@nestjs/common';
 
-import { Preference } from '../domain/preference.entity';
-import { PreferenceService } from '../service/preference.service';
+import { Preference } from '../domain/preference.entity.js';
+import { PreferenceService } from '../service/preference.service.js';
 
 @Controller('users/:userId/preferences')
 export class PreferenceController {

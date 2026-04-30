@@ -7,8 +7,8 @@ import {
   Put,
 } from '@nestjs/common';
 
-import { FridgeSnapshot } from '../domain/fridge.entity';
-import { FridgeService } from '../service/fridge.service';
+import { FridgeSnapshot } from '../domain/fridge.entity.js';
+import { FridgeService } from '../service/fridge.service.js';
 
 @Controller('users/:userId/fridge')
 export class FridgeController {

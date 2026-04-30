@@ -7,8 +7,8 @@ import {
   Put,
 } from '@nestjs/common';
 
-import { HealthProfile } from '../domain/health.entity';
-import { HealthService } from '../service/health.service';
+import { HealthProfile } from '../domain/health.entity.js';
+import { HealthService } from '../service/health.service.js';
 
 @Controller('users/:userId/health')
 export class HealthController {

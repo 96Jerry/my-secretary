@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { HealthProfile } from '../domain/health.entity';
-import { HealthRepository } from '../domain/health.repository';
-import { HealthOrmEntity } from './health.orm-entity';
+import { HealthProfile } from '../domain/health.entity.js';
+import { HealthRepository } from '../domain/health.repository.js';
+import { HealthOrmEntity } from './health.orm-entity.js';
 
 @Injectable()
 export class HealthTypeormRepository implements HealthRepository {

@@ -1,4 +1,4 @@
-import { MealPlan } from './meal-plan.entity';
+import { MealPlan } from './meal-plan.entity.js';
 
 export const MEAL_PLAN_REPOSITORY = Symbol('MEAL_PLAN_REPOSITORY');
 

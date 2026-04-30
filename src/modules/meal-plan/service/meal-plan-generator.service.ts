@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { ClaudeService } from '../../../infrastructure/claude/claude.service';
-import { FridgeService } from '../../fridge/service/fridge.service';
-import { HealthService } from '../../health/service/health.service';
-import { PreferenceService } from '../../preference/service/preference.service';
-import { ScheduleService } from '../../schedule/service/schedule.service';
+import { ClaudeService } from '../../../infrastructure/claude/claude.service.js';
+import { FridgeService } from '../../fridge/service/fridge.service.js';
+import { HealthService } from '../../health/service/health.service.js';
+import { PreferenceService } from '../../preference/service/preference.service.js';
+import { ScheduleService } from '../../schedule/service/schedule.service.js';
 
 export interface MealPlanContext {
   userId: string;

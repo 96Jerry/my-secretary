@@ -7,8 +7,8 @@ import {
   Put,
 } from '@nestjs/common';
 
-import { ScheduleEntry } from '../domain/schedule.entity';
-import { ScheduleService } from '../service/schedule.service';
+import { ScheduleEntry } from '../domain/schedule.entity.js';
+import { ScheduleService } from '../service/schedule.service.js';
 
 @Controller('users/:userId/schedule')
 export class ScheduleController {

@@ -1,4 +1,4 @@
-import { User } from './user.entity';
+import { User } from './user.entity.js';
 
 export const USER_REPOSITORY = Symbol('USER_REPOSITORY');
 

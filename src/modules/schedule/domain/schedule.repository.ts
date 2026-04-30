@@ -1,4 +1,4 @@
-import { ScheduleEntry } from './schedule.entity';
+import { ScheduleEntry } from './schedule.entity.js';
 
 export const SCHEDULE_REPOSITORY = Symbol('SCHEDULE_REPOSITORY');
 

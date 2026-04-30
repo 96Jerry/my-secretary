@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
-import { MealPlan } from '../domain/meal-plan.entity';
-import { MealPlanRepository } from '../domain/meal-plan.repository';
-import { MealPlanOrmEntity } from './meal-plan.orm-entity';
+import { MealPlan } from '../domain/meal-plan.entity.js';
+import { MealPlanRepository } from '../domain/meal-plan.repository.js';
+import { MealPlanOrmEntity } from './meal-plan.orm-entity.js';
 
 @Injectable()
 export class MealPlanTypeormRepository implements MealPlanRepository {

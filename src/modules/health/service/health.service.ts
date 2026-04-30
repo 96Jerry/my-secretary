@@ -1,10 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { HealthProfile } from '../domain/health.entity';
+import { HealthProfile } from '../domain/health.entity.js';
 import {
   HEALTH_REPOSITORY,
   type HealthRepository,
-} from '../domain/health.repository';
+} from '../domain/health.repository.js';
 
 @Injectable()
 export class HealthService {

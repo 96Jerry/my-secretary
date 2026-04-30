@@ -13,19 +13,19 @@ import {
   TextChannel,
 } from 'discord.js';
 
-import { EnvironmentVariables } from '../../config';
-import { FridgeService } from '../../modules/fridge/service/fridge.service';
-import { HealthService } from '../../modules/health/service/health.service';
-import { PreferenceService } from '../../modules/preference/service/preference.service';
-import { ScheduleService } from '../../modules/schedule/service/schedule.service';
-import { User } from '../../modules/user/domain/user.entity';
-import { UserService } from '../../modules/user/service/user.service';
+import { EnvironmentVariables } from '../../config/index.js';
+import { FridgeService } from '../../modules/fridge/service/fridge.service.js';
+import { HealthService } from '../../modules/health/service/health.service.js';
+import { PreferenceService } from '../../modules/preference/service/preference.service.js';
+import { ScheduleService } from '../../modules/schedule/service/schedule.service.js';
+import { User } from '../../modules/user/domain/user.entity.js';
+import { UserService } from '../../modules/user/service/user.service.js';
 import {
   FridgeItem,
   IntentContext,
   IntentParserService,
   ParsedIntent,
-} from './intent-parser.service';
+} from './intent-parser.service.js';
 
 type Category = 'fridge' | 'health' | 'preference' | 'schedule';
 
