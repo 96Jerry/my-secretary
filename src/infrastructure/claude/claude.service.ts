@@ -15,6 +15,7 @@ export class ClaudeService {
     );
 
     // CLAUDE_CODE_OAUTH_TOKEN은 dotenv가 process.env에 주입한 값을 SDK 서브프로세스가 그대로 읽음.
+    // CLAUDE_CODE_PATH가 지정된 환경(운영)에서만 명시. 로컬은 SDK 번들 바이너리 자동 사용.
     const iter = query({
       prompt,
       options: {
@@ -22,6 +23,9 @@ export class ClaudeService {
         tools: [],
         permissionMode: 'dontAsk',
         settingSources: [],
+        ...(this.env.CLAUDE_CODE_PATH && {
+          pathToClaudeCodeExecutable: this.env.CLAUDE_CODE_PATH,
+        }),
       },
     });
 

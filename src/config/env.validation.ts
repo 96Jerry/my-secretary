@@ -64,6 +64,10 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
+  CLAUDE_CODE_PATH?: string;
+
+  @IsString()
+  @IsOptional()
   CLAUDE_MODEL: string = 'claude-opus-4-7';
 
   @IsString()
