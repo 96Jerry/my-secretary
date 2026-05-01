@@ -73,6 +73,11 @@ export class EnvironmentVariables {
   @IsString()
   DISCORD_BOT_TOKEN!: string;
 
+  // 미설정 시 디스코드 알림 비활성화 (로컬/테스트 편의)
+  @IsString()
+  @IsOptional()
+  DISCORD_ERROR_WEBHOOK_URL?: string;
+
   @IsString()
   MAIL_HOST!: string;
 
