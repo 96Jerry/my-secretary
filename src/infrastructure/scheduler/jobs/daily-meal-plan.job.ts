@@ -17,7 +17,7 @@ export class DailyMealPlanJob {
     private readonly discordService: DiscordService,
   ) {}
 
-  @Cron(env.MEAL_PLAN_CRON, { name: 'daily-meal-plan' })
+  @Cron(env.MEAL_PLAN_CRON, { name: 'daily-meal-plan', timeZone: 'Asia/Seoul' })
   async run(): Promise<void> {
     const recipient = this.envVars.MEAL_PLAN_RECIPIENT;
     this.logger.log(`이메일 식단 발송 시작: ${recipient}`);
