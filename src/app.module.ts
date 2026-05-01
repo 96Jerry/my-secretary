@@ -11,6 +11,7 @@ import { SchedulerModule } from './infrastructure/scheduler/scheduler.module.js'
 import { FridgeModule } from './modules/fridge/fridge.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MealPlanModule } from './modules/meal-plan/meal-plan.module.js';
+import { MotivationModule } from './modules/motivation/motivation.module.js';
 import { PreferenceModule } from './modules/preference/preference.module.js';
 import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
 import { UserModule } from './modules/user/user.module.js';
@@ -30,6 +31,7 @@ import { UserModule } from './modules/user/user.module.js';
     PreferenceModule,
     ScheduleDomainModule,
     MealPlanModule,
+    MotivationModule,
     SchedulerModule,
   ],
 })
