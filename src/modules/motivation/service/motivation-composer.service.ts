@@ -4,7 +4,7 @@ import { ClaudeService } from '../../../infrastructure/claude/claude.service.js'
 import { buildComposeMessagePrompt } from '../domain/prompts/compose-message.prompt.js';
 import { withTimeout } from './timeout.js';
 
-const LLM_TIMEOUT_MS = 20_000;
+const LLM_TIMEOUT_MS = 60_000 * 5;
 
 export interface ComposeInput {
   rewrittenGoal: string;
