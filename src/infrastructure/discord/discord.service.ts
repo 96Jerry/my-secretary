@@ -328,7 +328,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
 
     const labels = missing.map((c) => CATEGORY_LABEL[c]).join(', ');
     await channel.send(
-      `오늘 식단 생성에 ${labels} 정보가 필요합니다. 채널에 입력해주세요.`,
+      `오늘 식단은 ${labels} 정보없이 발송되었습니다. 발송 전 채널에 입력하는걸 잊지 말아주세요.`,
     );
   }
 
