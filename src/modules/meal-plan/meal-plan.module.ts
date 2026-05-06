@@ -7,6 +7,7 @@ import { FridgeModule } from '../fridge/fridge.module.js';
 import { HealthModule } from '../health/health.module.js';
 import { PreferenceModule } from '../preference/preference.module.js';
 import { ScheduleDomainModule } from '../schedule/schedule.module.js';
+import { SituationModule } from '../situation/situation.module.js';
 import { UserModule } from '../user/user.module.js';
 import { MealPlanController } from './controller/meal-plan.controller.js';
 import { MEAL_PLAN_REPOSITORY } from './domain/meal-plan.repository.js';
@@ -23,6 +24,7 @@ import { MealPlanService } from './service/meal-plan.service.js';
     HealthModule,
     PreferenceModule,
     ScheduleDomainModule,
+    SituationModule,
     ClaudeModule,
     MailModule,
   ],

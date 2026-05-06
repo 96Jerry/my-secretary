@@ -5,6 +5,7 @@ import { FridgeService } from '../../fridge/service/fridge.service.js';
 import { HealthService } from '../../health/service/health.service.js';
 import { PreferenceService } from '../../preference/service/preference.service.js';
 import { ScheduleService } from '../../schedule/service/schedule.service.js';
+import { SituationService } from '../../situation/service/situation.service.js';
 import { buildGenerateMealPlanPrompt } from 'src/modules/meal-plan/domain/prompts/generate-meal-plan.prompt.js';
 
 export interface MealPlanContext {
@@ -25,6 +26,7 @@ export class MealPlanGeneratorService {
     private readonly healthService: HealthService,
     private readonly preferenceService: PreferenceService,
     private readonly scheduleService: ScheduleService,
+    private readonly situationService: SituationService,
     private readonly claudeService: ClaudeService,
   ) {}
 
@@ -38,12 +40,15 @@ export class MealPlanGeneratorService {
     userId: string,
     date: string,
   ): Promise<MealPlanContext> {
-    const [fridge, health, preference, schedule] = await Promise.all([
-      this.fridgeService.getLatest(userId),
-      this.healthService.getLatest(userId),
-      this.preferenceService.getLatest(userId),
-      this.scheduleService.getForDate(userId, date),
-    ]);
+    const [fridge, health, preference, schedule, situation] = await Promise.all(
+      [
+        this.fridgeService.getLatest(userId),
+        this.healthService.getLatest(userId),
+        this.preferenceService.getLatest(userId),
+        this.scheduleService.getForDate(userId, date),
+        this.situationService.getLatest(userId),
+      ],
+    );
 
     return {
       userId,
@@ -52,7 +57,7 @@ export class MealPlanGeneratorService {
       health: health?.data ?? null,
       preference: preference?.data ?? null,
       schedule: schedule?.data ?? null,
-      situation: null,
+      situation: situation?.data ?? null,
       recentMeals: [],
     };
   }

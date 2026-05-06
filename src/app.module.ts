@@ -14,6 +14,7 @@ import { MealPlanModule } from './modules/meal-plan/meal-plan.module.js';
 import { MotivationModule } from './modules/motivation/motivation.module.js';
 import { PreferenceModule } from './modules/preference/preference.module.js';
 import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
+import { SituationModule } from './modules/situation/situation.module.js';
 import { UserModule } from './modules/user/user.module.js';
 
 @Module({
@@ -30,6 +31,7 @@ import { UserModule } from './modules/user/user.module.js';
     HealthModule,
     PreferenceModule,
     ScheduleDomainModule,
+    SituationModule,
     MealPlanModule,
     MotivationModule,
     SchedulerModule,
