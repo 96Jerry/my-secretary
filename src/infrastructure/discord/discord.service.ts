@@ -328,6 +328,34 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
+   * 저녁 수집 cron 호출. 식사 기록과 내일 일정을 묻는 두 메시지를 봇 채널로 발송.
+   */
+  async promptEveningCollection(user: User): Promise<void> {
+    if (!user.guildId) return;
+
+    const channelId = this.botChannelByGuild.get(user.guildId);
+    if (!channelId) {
+      this.logger.warn(
+        `사용자 ${user.id} (guild ${user.guildId}): 봇 채널 미등록 — 저녁 수집 스킵`,
+      );
+      return;
+    }
+
+    const channel = this.client.channels.cache.get(channelId);
+    if (!channel || !channel.isTextBased() || !channel.isSendable()) {
+      this.logger.warn(`채널 ${channelId} 발송 불가 — 저녁 수집 스킵`);
+      return;
+    }
+
+    await channel.send(
+      '오늘 식사를 끼니별로 알려주세요. 예: `점심에 김치찌개. 주재료 돼지고기·김치, 조리법 끓임`',
+    );
+    await channel.send(
+      '내일 일정을 알려주세요. 다른 날짜도 가능합니다. 예: `내일 14시 미팅, 18시 약속`',
+    );
+  }
+
+  /**
    * cron에서 호출. 사용자의 비어 있는 카테고리가 있으면 해당 길드 봇 채널로
    * 입력 요청 메시지를 발송. 채널 미등록 시 경고 로그 남기고 스킵.
    */

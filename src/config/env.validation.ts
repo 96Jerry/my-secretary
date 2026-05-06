@@ -105,6 +105,10 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   MOTIVATION_CRON: string = '0 6 * * *';
+
+  @IsString()
+  @IsOptional()
+  EVENING_COLLECTION_CRON: string = '0 22 * * *';
 }
 
 export function validateEnv(
