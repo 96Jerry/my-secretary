@@ -10,6 +10,7 @@ import { MailModule } from './infrastructure/mail/mail.module.js';
 import { SchedulerModule } from './infrastructure/scheduler/scheduler.module.js';
 import { FridgeModule } from './modules/fridge/fridge.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { MealLogModule } from './modules/meal-log/meal-log.module.js';
 import { MealPlanModule } from './modules/meal-plan/meal-plan.module.js';
 import { MotivationModule } from './modules/motivation/motivation.module.js';
 import { PreferenceModule } from './modules/preference/preference.module.js';
@@ -32,6 +33,7 @@ import { UserModule } from './modules/user/user.module.js';
     PreferenceModule,
     ScheduleDomainModule,
     SituationModule,
+    MealLogModule,
     MealPlanModule,
     MotivationModule,
     SchedulerModule,

@@ -5,6 +5,7 @@ import { ClaudeModule } from '../../infrastructure/claude/claude.module.js';
 import { MailModule } from '../../infrastructure/mail/mail.module.js';
 import { FridgeModule } from '../fridge/fridge.module.js';
 import { HealthModule } from '../health/health.module.js';
+import { MealLogModule } from '../meal-log/meal-log.module.js';
 import { PreferenceModule } from '../preference/preference.module.js';
 import { ScheduleDomainModule } from '../schedule/schedule.module.js';
 import { SituationModule } from '../situation/situation.module.js';
@@ -25,6 +26,7 @@ import { MealPlanService } from './service/meal-plan.service.js';
     PreferenceModule,
     ScheduleDomainModule,
     SituationModule,
+    MealLogModule,
     ClaudeModule,
     MailModule,
   ],

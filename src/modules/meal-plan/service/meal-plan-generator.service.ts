@@ -3,10 +3,13 @@ import { Injectable } from '@nestjs/common';
 import { ClaudeService } from '../../../infrastructure/claude/claude.service.js';
 import { FridgeService } from '../../fridge/service/fridge.service.js';
 import { HealthService } from '../../health/service/health.service.js';
+import { MealLogService } from '../../meal-log/service/meal-log.service.js';
 import { PreferenceService } from '../../preference/service/preference.service.js';
 import { ScheduleService } from '../../schedule/service/schedule.service.js';
 import { SituationService } from '../../situation/service/situation.service.js';
 import { buildGenerateMealPlanPrompt } from 'src/modules/meal-plan/domain/prompts/generate-meal-plan.prompt.js';
+
+const RECENT_MEALS_DAYS = 7;
 
 export interface MealPlanContext {
   userId: string;
@@ -27,6 +30,7 @@ export class MealPlanGeneratorService {
     private readonly preferenceService: PreferenceService,
     private readonly scheduleService: ScheduleService,
     private readonly situationService: SituationService,
+    private readonly mealLogService: MealLogService,
     private readonly claudeService: ClaudeService,
   ) {}
 
@@ -40,15 +44,15 @@ export class MealPlanGeneratorService {
     userId: string,
     date: string,
   ): Promise<MealPlanContext> {
-    const [fridge, health, preference, schedule, situation] = await Promise.all(
-      [
+    const [fridge, health, preference, schedule, situation, recentLogs] =
+      await Promise.all([
         this.fridgeService.getLatest(userId),
         this.healthService.getLatest(userId),
         this.preferenceService.getLatest(userId),
         this.scheduleService.getForDate(userId, date),
         this.situationService.getLatest(userId),
-      ],
-    );
+        this.mealLogService.getRecent(userId, date, RECENT_MEALS_DAYS),
+      ]);
 
     return {
       userId,
@@ -58,7 +62,11 @@ export class MealPlanGeneratorService {
       preference: preference?.data ?? null,
       schedule: schedule?.data ?? null,
       situation: situation?.data ?? null,
-      recentMeals: [],
+      recentMeals: recentLogs.map((m) => ({
+        date: m.date,
+        slot: m.slot,
+        ...m.data,
+      })),
     };
   }
 }
