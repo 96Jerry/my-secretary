@@ -16,8 +16,11 @@ import {
 import { EnvironmentVariables } from '../../config/index.js';
 import { FridgeService } from '../../modules/fridge/service/fridge.service.js';
 import { HealthService } from '../../modules/health/service/health.service.js';
+import type { MealSlot } from '../../modules/meal-log/domain/meal-log.entity.js';
+import { MealLogService } from '../../modules/meal-log/service/meal-log.service.js';
 import { PreferenceService } from '../../modules/preference/service/preference.service.js';
 import { ScheduleService } from '../../modules/schedule/service/schedule.service.js';
+import { SituationService } from '../../modules/situation/service/situation.service.js';
 import { User } from '../../modules/user/domain/user.entity.js';
 import { UserService } from '../../modules/user/service/user.service.js';
 import {
@@ -36,6 +39,14 @@ type PendingUpdate =
   | {
       kind: 'schedule';
       date: string;
+      data: Record<string, unknown>;
+      summary: string;
+    }
+  | { kind: 'situation'; data: Record<string, unknown>; summary: string }
+  | {
+      kind: 'meal_log';
+      date: string;
+      slot: MealSlot;
       data: Record<string, unknown>;
       summary: string;
     };
@@ -85,6 +96,8 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     private readonly healthService: HealthService,
     private readonly preferenceService: PreferenceService,
     private readonly scheduleService: ScheduleService,
+    private readonly situationService: SituationService,
+    private readonly mealLogService: MealLogService,
     private readonly intentParser: IntentParserService,
   ) {}
 
@@ -228,12 +241,15 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     }
 
     const today = todayIso();
-    const [fridge, health, preference, schedule] = await Promise.all([
-      this.fridgeService.getLatest(user.id),
-      this.healthService.getLatest(user.id),
-      this.preferenceService.getLatest(user.id),
-      this.scheduleService.getForDate(user.id, today),
-    ]);
+    const [fridge, health, preference, schedule, situation] = await Promise.all(
+      [
+        this.fridgeService.getLatest(user.id),
+        this.healthService.getLatest(user.id),
+        this.preferenceService.getLatest(user.id),
+        this.scheduleService.getForDate(user.id, today),
+        this.situationService.getLatest(user.id),
+      ],
+    );
 
     const ctx: IntentContext = {
       today,
@@ -241,13 +257,16 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       health: health?.data ?? null,
       preference: preference?.data ?? null,
       schedule: schedule?.data ?? null,
+      situation: situation?.data ?? null,
     };
 
     const parsed = await this.intentParser.parse(text, ctx);
 
     if (parsed.intent === 'other') {
       const tail = await this.tailFor(user.id, false);
-      await msg.reply(`냉장고, 건강, 선호, 일정 업데이트만 가능합니다.${tail}`);
+      await msg.reply(
+        `냉장고, 건강, 선호, 일정, 상황, 식사 기록 업데이트만 가능합니다.${tail}`,
+      );
       return;
     }
 
@@ -277,6 +296,12 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
         return;
       case 'schedule':
         await this.scheduleService.upsert(userId, p.date, p.data);
+        return;
+      case 'situation':
+        await this.situationService.upsert(userId, p.data);
+        return;
+      case 'meal_log':
+        await this.mealLogService.upsert(userId, p.date, p.slot, p.data);
         return;
     }
   }
@@ -371,6 +396,19 @@ function toPending(parsed: ParsedIntent): PendingUpdate | null {
         data: parsed.data,
         summary: parsed.summary,
       };
+    case 'update_situation':
+      return Object.keys(parsed.data).length === 0
+        ? null
+        : { kind: 'situation', data: parsed.data, summary: parsed.summary };
+    case 'update_meal_log':
+      if (!parsed.date || Object.keys(parsed.data).length === 0) return null;
+      return {
+        kind: 'meal_log',
+        date: parsed.date,
+        slot: parsed.slot,
+        data: parsed.data,
+        summary: parsed.summary,
+      };
     case 'other':
       return null;
   }
@@ -386,6 +424,10 @@ function askQuestion(p: PendingUpdate): string {
       return '선호 업데이트할까요? (예/아니오)';
     case 'schedule':
       return `일정(${p.date}) 업데이트할까요? (예/아니오)`;
+    case 'situation':
+      return '상황 업데이트할까요? (예/아니오)';
+    case 'meal_log':
+      return `식사 기록(${p.date} ${p.slot}) 저장할까요? (예/아니오)`;
   }
 }
 
@@ -399,6 +441,10 @@ function confirmedMessage(p: PendingUpdate): string {
       return '선호 업데이트 완료.';
     case 'schedule':
       return `일정(${p.date}) 업데이트 완료.`;
+    case 'situation':
+      return '상황 업데이트 완료.';
+    case 'meal_log':
+      return `식사 기록(${p.date} ${p.slot}) 저장 완료.`;
   }
 }
 

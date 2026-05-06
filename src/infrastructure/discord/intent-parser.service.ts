@@ -1,11 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import type { MealSlot } from '../../modules/meal-log/domain/meal-log.entity.js';
 import { ClaudeService } from '../claude/claude.service.js';
 
 export interface FridgeItem {
   name: string;
   quantity: string | number;
 }
+
+const VALID_SLOTS: ReadonlySet<MealSlot> = new Set([
+  'breakfast',
+  'lunch',
+  'dinner',
+]);
 
 export type ParsedIntent =
   | { intent: 'update_fridge'; items: FridgeItem[]; summary: string }
@@ -25,6 +32,18 @@ export type ParsedIntent =
       data: Record<string, unknown>;
       summary: string;
     }
+  | {
+      intent: 'update_situation';
+      data: Record<string, unknown>;
+      summary: string;
+    }
+  | {
+      intent: 'update_meal_log';
+      date: string;
+      slot: MealSlot;
+      data: Record<string, unknown>;
+      summary: string;
+    }
   | { intent: 'other'; summary: string };
 
 export interface IntentContext {
@@ -33,6 +52,7 @@ export interface IntentContext {
   health: Record<string, unknown> | null;
   preference: Record<string, unknown> | null;
   schedule: Record<string, unknown> | null;
+  situation: Record<string, unknown> | null;
 }
 
 @Injectable()
@@ -50,7 +70,7 @@ export class IntentParserService {
   private buildPrompt(message: string, ctx: IntentContext): string {
     return [
       `<role>`,
-      `한국어 자연어 메시지를 5개 의도 중 하나로 분류하고, 해당 도메인의 최종 상태를 JSON으로 출력한다.`,
+      `한국어 자연어 메시지를 7개 의도 중 하나로 분류하고, 해당 도메인의 최종 상태를 JSON으로 출력한다.`,
       `</role>`,
       ``,
       `<intents>`,
@@ -58,6 +78,8 @@ export class IntentParserService {
       `update_health: 건강 정보 (목표·나이·체중·키·알레르기)`,
       `update_preference: 선호 (추가구매 허용·식사방식·음식·배달 선호)`,
       `update_schedule: 특정 날짜의 일정 (수면·약속·운동)`,
+      `update_situation: 생활 맥락 (가구 형태·주방 수준·예산 감각)`,
+      `update_meal_log: 끼니별 실제 식사 기록 (메뉴·방식·주재료·조리법)`,
       `other: 위에 해당하지 않음 (식단 추천 요청·잡담 등)`,
       `</intents>`,
       ``,
@@ -71,6 +93,7 @@ export class IntentParserService {
       `건강: ${JSON.stringify(ctx.health ?? {})}`,
       `선호: ${JSON.stringify(ctx.preference ?? {})}`,
       `오늘 일정: ${JSON.stringify(ctx.schedule ?? {})}`,
+      `상황: ${JSON.stringify(ctx.situation ?? {})}`,
       `</current_state>`,
       ``,
       `<user_message>`,
@@ -79,10 +102,12 @@ export class IntentParserService {
       ``,
       `<rules>`,
       `1. 메시지에 여러 의도가 섞여 있어도 가장 비중 큰 1개만 선택한다.`,
-      `2. 선택한 도메인은 diff가 아닌 **전체 최종 상태**로 출력한다 — 메시지에서 바뀌지 않은 필드는 current_state 값을 그대로 복사해 포함한다.`,
+      `2. 선택한 도메인은 diff가 아닌 **전체 최종 상태**로 출력한다 — 메시지에서 바뀌지 않은 필드는 current_state 값을 그대로 복사해 포함한다. (단 update_meal_log는 단일 끼니의 신규 기록이라 current_state 복사 대상이 아니다.)`,
       `3. summary는 한국어 1~2문장, 변경 포인트 위주의 자연스러운 톤으로 작성한다.`,
-      `4. 의도가 모호하거나 위 4개 도메인에 해당하지 않으면 other로 분류한다.`,
-      `5. 출력은 JSON 객체 1개만. 코드펜스·주석·전후 텍스트 금지.`,
+      `4. 의도가 모호하거나 위 6개 도메인에 해당하지 않으면 other로 분류한다.`,
+      `5. update_meal_log은 메시지에서 끼니(아침/점심/저녁)가 명시적으로 식별되어야만 출력한다. 식별 불가 시 other.`,
+      `6. update_meal_log의 slot은 정확히 breakfast|lunch|dinner 중 하나. 한국어 표현은 매핑한다 (아침→breakfast, 점심→lunch, 저녁→dinner).`,
+      `7. 출력은 JSON 객체 1개만. 코드펜스·주석·전후 텍스트 금지.`,
       `</rules>`,
       ``,
       `<output_schema>`,
@@ -90,6 +115,8 @@ export class IntentParserService {
       `update_health     → { "intent":"update_health",     "data":{...최종 건강 상태},                          "summary":string }`,
       `update_preference → { "intent":"update_preference", "data":{...최종 선호 상태},                          "summary":string }`,
       `update_schedule   → { "intent":"update_schedule",   "date":"YYYY-MM-DD", "data":{...해당 날짜의 최종 일정}, "summary":string }`,
+      `update_situation  → { "intent":"update_situation",  "data":{household,kitchenLevel,budgetLevel,...},     "summary":string }`,
+      `update_meal_log   → { "intent":"update_meal_log",   "date":"YYYY-MM-DD", "slot":"breakfast|lunch|dinner", "data":{name,mode,mainIngredients,method,notes?}, "summary":string }`,
       `other             → { "intent":"other", "summary":string }`,
       `</output_schema>`,
     ].join('\n');
@@ -107,6 +134,7 @@ export class IntentParserService {
       items?: unknown;
       data?: unknown;
       date?: unknown;
+      slot?: unknown;
       summary?: unknown;
     };
     try {
@@ -142,6 +170,21 @@ export class IntentParserService {
           data,
           summary,
         };
+      case 'update_situation':
+        return { intent: 'update_situation', data, summary };
+      case 'update_meal_log': {
+        const slot = obj.slot;
+        if (typeof slot !== 'string' || !VALID_SLOTS.has(slot as MealSlot)) {
+          return { intent: 'other', summary };
+        }
+        return {
+          intent: 'update_meal_log',
+          date: typeof obj.date === 'string' ? obj.date : '',
+          slot: slot as MealSlot,
+          data,
+          summary,
+        };
+      }
       default:
         return { intent: 'other', summary };
     }
