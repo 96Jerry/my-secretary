@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 
-import { EnvironmentVariables } from '../../config/index.js';
+import { EnvironmentVariables } from '@config/index.js';
 
 @Injectable()
 export class ClaudeService {

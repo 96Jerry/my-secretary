@@ -1,5 +1,6 @@
 import type { DataSourceOptions } from 'typeorm';
 
+// typeorm CLI(ts-node-esm)는 tsconfig paths를 해석하지 않으므로 alias 사용 금지
 import { env } from '../../config/index.js';
 
 // ESM에선 __dirname 미지원 → import.meta.dirname 사용 (Node 20.11+).

@@ -13,7 +13,7 @@ import {
   TextChannel,
 } from 'discord.js';
 
-import { EnvironmentVariables } from '../../config/index.js';
+import { EnvironmentVariables } from '@config/index.js';
 import { FridgeService } from '../../modules/fridge/service/fridge.service.js';
 import { HealthService } from '../../modules/health/service/health.service.js';
 import type { MealSlot } from '../../modules/meal-log/domain/meal-log.entity.js';

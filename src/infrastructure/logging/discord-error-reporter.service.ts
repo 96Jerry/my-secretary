@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { EnvironmentVariables } from '../../config/index.js';
+import { EnvironmentVariables } from '@config/index.js';
 
 export interface ErrorReport {
   message: string;
