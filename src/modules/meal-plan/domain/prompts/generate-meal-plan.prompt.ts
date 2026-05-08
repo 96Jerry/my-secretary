@@ -1,4 +1,4 @@
-import { MealPlanContext } from 'src/modules/meal-plan/service/meal-plan-generator.service.js';
+import { MealPlanContext } from '../../service/meal-plan-generator.service.js';
 
 export function buildGenerateMealPlanPrompt(ctx: MealPlanContext): string {
   return `${ctx.date}의 아침/점심/저녁 식단을 추천해줘.
