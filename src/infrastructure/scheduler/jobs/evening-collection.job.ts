@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
 import { env } from '@config/index.js';
-import { UserService } from '../../../modules/user/service/user.service.js';
+import { UserService } from '@modules/user/service/user.service.js';
 import { DiscordService } from '../../discord/discord.service.js';
 
 @Injectable()

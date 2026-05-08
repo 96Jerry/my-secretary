@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 
 import { env } from '@config/index.js';
-import { MotivationService } from '../../../modules/motivation/service/motivation.service.js';
+import { MotivationService } from '@modules/motivation/service/motivation.service.js';
 
 @Injectable()
 export class DailyMotivationJob {

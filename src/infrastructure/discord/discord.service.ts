@@ -14,15 +14,15 @@ import {
 } from 'discord.js';
 
 import { EnvironmentVariables } from '@config/index.js';
-import { FridgeService } from '../../modules/fridge/service/fridge.service.js';
-import { HealthService } from '../../modules/health/service/health.service.js';
-import type { MealSlot } from '../../modules/meal-log/domain/meal-log.entity.js';
-import { MealLogService } from '../../modules/meal-log/service/meal-log.service.js';
-import { PreferenceService } from '../../modules/preference/service/preference.service.js';
-import { ScheduleService } from '../../modules/schedule/service/schedule.service.js';
-import { SituationService } from '../../modules/situation/service/situation.service.js';
-import { User } from '../../modules/user/domain/user.entity.js';
-import { UserService } from '../../modules/user/service/user.service.js';
+import { FridgeService } from '@modules/fridge/service/fridge.service.js';
+import { HealthService } from '@modules/health/service/health.service.js';
+import type { MealSlot } from '@modules/meal-log/domain/meal-log.entity.js';
+import { MealLogService } from '@modules/meal-log/service/meal-log.service.js';
+import { PreferenceService } from '@modules/preference/service/preference.service.js';
+import { ScheduleService } from '@modules/schedule/service/schedule.service.js';
+import { SituationService } from '@modules/situation/service/situation.service.js';
+import { User } from '@modules/user/domain/user.entity.js';
+import { UserService } from '@modules/user/service/user.service.js';
 import {
   FridgeItem,
   IntentContext,

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
-import type { MealSlot } from '../../modules/meal-log/domain/meal-log.entity.js';
+import type { MealSlot } from '@modules/meal-log/domain/meal-log.entity.js';
 import { ClaudeService } from '../claude/claude.service.js';
 
 export interface FridgeItem {
