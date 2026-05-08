@@ -18,6 +18,10 @@ async function bootstrap() {
   );
 
   await app.listen(env.PORT);
+
+  if (process.send) {
+    process.send('ready');
+  }
 }
 
 void bootstrap();
