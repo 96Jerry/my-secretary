@@ -7,7 +7,7 @@ import { MealLogService } from '../../meal-log/service/meal-log.service.js';
 import { PreferenceService } from '../../preference/service/preference.service.js';
 import { ScheduleService } from '../../schedule/service/schedule.service.js';
 import { SituationService } from '../../situation/service/situation.service.js';
-import { buildGenerateMealPlanPrompt } from 'src/modules/meal-plan/domain/prompts/generate-meal-plan.prompt.js';
+import { buildGenerateMealPlanPrompt } from '../domain/prompts/generate-meal-plan.prompt.js';
 
 const RECENT_MEALS_DAYS = 7;
 
