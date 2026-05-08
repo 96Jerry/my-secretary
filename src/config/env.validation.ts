@@ -11,9 +11,18 @@ import {
   validateSync,
 } from 'class-validator';
 
-const toBoolean = ({ value }: { value: unknown }): boolean => {
-  if (typeof value === 'boolean') return value;
-  return String(value).toLowerCase() === 'true';
+// implicit conversion이 'false' 문자열을 true로 바꾸는 것을 피하기 위해
+// 변환 전 원본 값(obj[key])을 직접 읽어 판단한다.
+const toBoolean = ({
+  obj,
+  key,
+}: {
+  obj: Record<string, unknown>;
+  key: string;
+}): boolean => {
+  const raw = obj[key];
+  if (typeof raw === 'boolean') return raw;
+  return String(raw).toLowerCase() === 'true';
 };
 
 export class EnvironmentVariables {
@@ -117,6 +126,7 @@ export function validateEnv(
   const validated = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
   });
+
   const errors = validateSync(validated, { skipMissingProperties: false });
   if (errors.length > 0) {
     throw new Error(`Environment validation failed:\n${errors.toString()}`);
