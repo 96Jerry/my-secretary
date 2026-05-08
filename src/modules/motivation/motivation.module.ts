@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ClaudeModule } from '../../infrastructure/claude/claude.module.js';
-import { MailModule } from '../../infrastructure/mail/mail.module.js';
+import { ClaudeModule } from '@infra/claude/claude.module.js';
+import { MailModule } from '@infra/mail/mail.module.js';
 import { UserModule } from '../user/user.module.js';
 import { MOTIVATION_MESSAGE_REPOSITORY } from './domain/motivation-message.repository.js';
 import { MOTIVATION_PROFILE_REPOSITORY } from './domain/motivation-profile.repository.js';

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { ClaudeService } from '../../../infrastructure/claude/claude.service.js';
+import { ClaudeService } from '@infra/claude/claude.service.js';
 import { buildComposeMessagePrompt } from '../domain/prompts/compose-message.prompt.js';
 import { withTimeout } from './timeout.js';
 

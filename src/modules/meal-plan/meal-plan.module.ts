@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { ClaudeModule } from '../../infrastructure/claude/claude.module.js';
-import { MailModule } from '../../infrastructure/mail/mail.module.js';
+import { ClaudeModule } from '@infra/claude/claude.module.js';
+import { MailModule } from '@infra/mail/mail.module.js';
 import { FridgeModule } from '../fridge/fridge.module.js';
 import { HealthModule } from '../health/health.module.js';
 import { MealLogModule } from '../meal-log/meal-log.module.js';

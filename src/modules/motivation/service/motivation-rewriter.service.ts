@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { ClaudeService } from '../../../infrastructure/claude/claude.service.js';
+import { ClaudeService } from '@infra/claude/claude.service.js';
 import { MotivationProfile } from '../domain/motivation-profile.entity.js';
 import {
   MOTIVATION_PROFILE_REPOSITORY,

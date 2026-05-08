@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { ClaudeService } from '../../../infrastructure/claude/claude.service.js';
+import { ClaudeService } from '@infra/claude/claude.service.js';
 import { FridgeService } from '../../fridge/service/fridge.service.js';
 import { HealthService } from '../../health/service/health.service.js';
 import { MealLogService } from '../../meal-log/service/meal-log.service.js';

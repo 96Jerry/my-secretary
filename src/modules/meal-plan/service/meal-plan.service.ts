@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import { MailService } from '../../../infrastructure/mail/mail.service.js';
+import { MailService } from '@infra/mail/mail.service.js';
 import { UserService } from '../../user/service/user.service.js';
 import { MealPlan } from '../domain/meal-plan.entity.js';
 import {
