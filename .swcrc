@@ -1,0 +1,30 @@
+{
+  "$schema": "https://swc.rs/schema.json",
+  "sourceMaps": true,
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "decorators": true,
+      "dynamicImport": true
+    },
+    "transform": {
+      "legacyDecorator": true,
+      "decoratorMetadata": true
+    },
+    "baseUrl": "./",
+    "paths": {
+      "@modules/*": ["src/modules/*"],
+      "@infra/*": ["src/infrastructure/*"],
+      "@config/*": ["src/config/*"]
+    },
+    "keepClassNames": true,
+    "target": "es2023"
+  },
+  "module": {
+    "type": "nodenext"
+  },
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
