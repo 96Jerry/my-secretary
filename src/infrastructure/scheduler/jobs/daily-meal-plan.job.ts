@@ -5,6 +5,7 @@ import { env, EnvironmentVariables } from '@config/index.js';
 import { MealPlanService } from '@modules/meal-plan/service/meal-plan.service.js';
 import { UserService } from '@modules/user/service/user.service.js';
 import { DiscordService } from '../../discord/discord.service.js';
+import { ResourceProfilerService } from '@infra/profiler/resource-profiler.service.js';
 
 @Injectable()
 export class DailyMealPlanJob {
@@ -15,10 +16,17 @@ export class DailyMealPlanJob {
     private readonly mealPlanService: MealPlanService,
     private readonly userService: UserService,
     private readonly discordService: DiscordService,
+    private readonly resourceProfiler: ResourceProfilerService,
   ) {}
 
   @Cron(env.MEAL_PLAN_CRON, { name: 'daily-meal-plan', timeZone: 'Asia/Seoul' })
   async run(): Promise<void> {
+    await this.resourceProfiler.profile(env.MEAL_PLAN_CRON, 3000, () =>
+      this.doWork(),
+    );
+  }
+
+  async doWork(): Promise<void> {
     const recipient = this.envVars.MEAL_PLAN_RECIPIENT;
     this.logger.log(`이메일 식단 발송 시작: ${recipient}`);
     try {

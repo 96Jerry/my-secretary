@@ -17,6 +17,7 @@ import { PreferenceModule } from './modules/preference/preference.module.js';
 import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
 import { SituationModule } from './modules/situation/situation.module.js';
 import { UserModule } from './modules/user/user.module.js';
+import { ProfilerModule } from '@infra/profiler/profiler.module.js';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { UserModule } from './modules/user/user.module.js';
     MealPlanModule,
     MotivationModule,
     SchedulerModule,
+    ProfilerModule,
   ],
 })
 export class AppModule {}
