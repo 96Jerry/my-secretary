@@ -5,8 +5,8 @@
       "script": "dist/main.js",
       "instances": 1,
       "exec_mode": "fork",
-      "wait_ready": true,
-      "listen_timeout": 60000,
+      "listen_timeout": 20000,
+      "min_uptime": 30000,
       "time": true,
       "env": {
         "NODE_ENV": "production"

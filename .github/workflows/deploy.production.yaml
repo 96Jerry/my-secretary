@@ -69,5 +69,5 @@ jobs:
             rm deploy.tar.gz
 
             # PM2로 무중단 재시작 (없으면 새로 시작)
-            pm2 startOrReload ecosystem.config.json --update-env
+            pm2 startOrReload ecosystem.config.json --update-env --wait-ready --listen-timeout 20000
             pm2 save
