@@ -13,6 +13,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { MealLogModule } from './modules/meal-log/meal-log.module.js';
 import { MealPlanModule } from './modules/meal-plan/meal-plan.module.js';
 import { MotivationModule } from './modules/motivation/motivation.module.js';
+import { PalworldNewsModule } from './modules/palworld-news/palworld-news.module.js';
 import { PreferenceModule } from './modules/preference/preference.module.js';
 import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
 import { SituationModule } from './modules/situation/situation.module.js';
@@ -37,6 +38,7 @@ import { ProfilerModule } from '@infra/profiler/profiler.module.js';
     MealLogModule,
     MealPlanModule,
     MotivationModule,
+    PalworldNewsModule,
     SchedulerModule,
     ProfilerModule,
   ],

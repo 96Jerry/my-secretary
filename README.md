@@ -130,6 +130,19 @@ EveningCollectionJob
   └─ Discord 채널로 식사 기록 + 내일 일정 입력 요청
 ```
 
+### 팰월드 패치노트 알림 (1분 주기, `PALWORLD_NEWS_CRON`)
+
+```
+PalworldNewsJob
+  └─ PalworldNewsService.checkForNewPosts
+       ├─ SteamNewsService.fetchNews (Steam 뉴스 API)
+       ├─ 개발사 공지(steam_community_announcements)만 필터 — 언론 기사 제외
+       ├─ PalworldNewsRepository.isEmpty → 최초 기동이면 알림 없이 gid 저장만
+       ├─ PalworldNewsRepository.findKnownGids (이미 알림 보낸 글 제외)
+       ├─ MailService.send (새 글 제목 목록)
+       └─ PalworldNewsRepository.saveGids (발송 성공 후 저장)
+```
+
 ### 디스코드 메시지 처리 (입력 어댑터)
 
 ```
@@ -201,6 +214,7 @@ pnpm start:dev
 | `MEAL_PLAN_CRON`          | `0 6 * * *`  | 식단 생성 + 발송           |
 | `MOTIVATION_CRON`         | `0 6 * * *`  | 동기부여 메시지 발송       |
 | `EVENING_COLLECTION_CRON` | `0 22 * * *` | 식사 기록 + 내일 일정 수집 |
+| `PALWORLD_NEWS_CRON`      | `* * * * *`  | 팰월드 패치노트 폴링       |
 
 ## 메모
 

@@ -118,6 +118,14 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   EVENING_COLLECTION_CRON: string = '0 22 * * *';
+
+  // 팰월드 패치노트 알림 수신자
+  @IsEmail()
+  PALWORLD_NEWS_RECIPIENT!: string;
+
+  @IsString()
+  @IsOptional()
+  PALWORLD_NEWS_CRON: string = '* * * * *';
 }
 
 export function validateEnv(
