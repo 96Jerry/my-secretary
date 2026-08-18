@@ -125,7 +125,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  PALWORLD_NEWS_CRON: string = '* * * * *';
+  PALWORLD_NEWS_CRON: string = '0 9 * * *';
 }
 
 export function validateEnv(

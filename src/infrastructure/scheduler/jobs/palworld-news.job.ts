@@ -10,8 +10,6 @@ export class PalworldNewsJob {
 
   constructor(private readonly palworldNewsService: PalworldNewsService) {}
 
-  // ResourceProfiler는 싱글턴에 interval 핸들 하나만 유지해 재진입이 불가하다.
-  // 1분 주기인 이 잡을 감싸면 하루 1회 잡들의 측정 세션을 상시 깨뜨리므로 사용하지 않는다.
   @Cron(env.PALWORLD_NEWS_CRON, {
     name: 'palworld-news',
     timeZone: 'Asia/Seoul',

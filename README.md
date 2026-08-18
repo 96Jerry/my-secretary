@@ -130,7 +130,7 @@ EveningCollectionJob
   └─ Discord 채널로 식사 기록 + 내일 일정 입력 요청
 ```
 
-### 팰월드 패치노트 알림 (1분 주기, `PALWORLD_NEWS_CRON`)
+### 팰월드 패치노트 알림 (매일 09:00, `PALWORLD_NEWS_CRON`)
 
 ```
 PalworldNewsJob
@@ -214,7 +214,7 @@ pnpm start:dev
 | `MEAL_PLAN_CRON`          | `0 6 * * *`  | 식단 생성 + 발송           |
 | `MOTIVATION_CRON`         | `0 6 * * *`  | 동기부여 메시지 발송       |
 | `EVENING_COLLECTION_CRON` | `0 22 * * *` | 식사 기록 + 내일 일정 수집 |
-| `PALWORLD_NEWS_CRON`      | `* * * * *`  | 팰월드 패치노트 폴링       |
+| `PALWORLD_NEWS_CRON`      | `0 9 * * *`  | 팰월드 패치노트 폴링       |
 
 ## 메모
 
