@@ -126,6 +126,13 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   PALWORLD_NEWS_CRON: string = '0 9 * * *';
+
+  // NestJS Observe 자격 증명
+  @IsString()
+  OBSERVE_APP_KEY!: string;
+
+  @IsString()
+  OBSERVE_APP_SECRET!: string;
 }
 
 export function validateEnv(
