@@ -28,7 +28,8 @@ export interface CgvShowtime {
   scnsrtTm: string; // 시작시각 HHmm. 심야는 '2500'처럼 24를 넘길 수 있다
   scnendTm: string;
   movNo: string; // 영화 번호
-  movNm: string; // 영화 제목
+  movNm: string; // 영화 제목 (국문)
+  movEnm: string; // 영화 제목 (영문). 거의 모든 상영작에 채워져 있다
   movkndDsplNm: string; // 예: 'IMAX LASER 2D'
   tcscnsGradCd: string; // 특별관 등급: 01 일반 / 02 4DX / 03 아이맥스 / 04 SCREENX
   frSeatCnt: number; // 잔여 좌석
@@ -116,6 +117,7 @@ function toShowtime(entry: unknown): CgvShowtime | null {
     scnendTm: readString(row.scnendTm) ?? '',
     movNo,
     movNm: readString(row.movNm) ?? '(제목 없음)',
+    movEnm: readString(row.movEnm) ?? '',
     movkndDsplNm: readString(row.movkndDsplNm) ?? '',
     tcscnsGradCd: readString(row.tcscnsGradCd) ?? '',
     frSeatCnt: readCount(row.frSeatCnt),

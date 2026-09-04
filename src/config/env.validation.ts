@@ -131,7 +131,8 @@ export class EnvironmentVariables {
   @IsEmail()
   CGV_IMAX_RECIPIENT!: string;
 
-  // 감시할 영화 제목(쉼표 구분, 부분 일치·공백/대소문자 무시). 예: '오디세이,아바타'
+  // 감시할 영화 제목(쉼표 구분, 부분 일치·공백/대소문자 무시).
+  // 국문/영문 제목 모두 인식한다. 예: '오디세이,아바타' 또는 'Odyssey,Avatar'
   @IsString()
   CGV_IMAX_MOVIES!: string;
 

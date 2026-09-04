@@ -102,7 +102,7 @@ export class CgvImaxService {
           ...rows.filter(
             (row) =>
               row.tcscnsGradCd === IMAX_GRADE_CD &&
-              matchesWatchList(row.movNm, watchList),
+              matchesWatchList(row, watchList),
           ),
         );
       } catch (e) {
@@ -204,10 +204,16 @@ function normalize(s: string): string {
   return s.replace(/\s+/g, '').toLowerCase();
 }
 
-// 제목 부분 일치. '오디세이'로 '오디세이(IMAX LASER 2D)' 같은 변형까지 잡는다.
-function matchesWatchList(movNm: string, watchList: string[]): boolean {
-  const title = normalize(movNm);
-  return watchList.some((keyword) => title.includes(keyword));
+/**
+ * 제목 부분 일치. '오디세이'로 '오디세이(IMAX LASER 2D)' 같은 변형까지 잡는다.
+ * 국문/영문 제목 양쪽을 보므로, 서버 터미널에서 한글 입력이 안 되는 환경에서는
+ * 영문 제목('Odyssey')으로 지정해도 된다.
+ */
+function matchesWatchList(s: CgvShowtime, watchList: string[]): boolean {
+  const titles = [normalize(s.movNm), normalize(s.movEnm)];
+  return watchList.some((keyword) =>
+    titles.some((title) => title !== '' && title.includes(keyword)),
+  );
 }
 
 // scnsrtTm은 '2500'처럼 24를 넘을 수 있다(익일 01:00 상영).
