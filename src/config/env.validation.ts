@@ -127,6 +127,21 @@ export class EnvironmentVariables {
   @IsOptional()
   PALWORLD_NEWS_CRON: string = '0 9 * * *';
 
+  // CGV 용산아이파크몰 IMAX 신규 회차 알림 수신자
+  @IsEmail()
+  CGV_IMAX_RECIPIENT!: string;
+
+  // 감시할 영화 제목(쉼표 구분, 부분 일치·공백/대소문자 무시). 예: '오디세이,아바타'
+  @IsString()
+  CGV_IMAX_MOVIES!: string;
+
+  // 예매 오픈 직후 좌석이 빠르게 나가므로 1분 간격으로 확인한다.
+  // 매 분 전체 날짜를 긁지는 않고(FRONTIER_DAYS 참고), 알림 보낸 회차는 메모리
+  // 캐시로 비교하므로 짧은 주기여도 DB와 CGV 양쪽 부하가 크지 않다.
+  @IsString()
+  @IsOptional()
+  CGV_IMAX_CRON: string = '* * * * *';
+
   // NestJS Observe 자격 증명
   @IsString()
   OBSERVE_APP_KEY!: string;

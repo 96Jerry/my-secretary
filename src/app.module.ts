@@ -8,6 +8,7 @@ import { DiscordModule } from './infrastructure/discord/discord.module.js';
 import { LoggingModule } from './infrastructure/logging/logging.module.js';
 import { MailModule } from './infrastructure/mail/mail.module.js';
 import { SchedulerModule } from './infrastructure/scheduler/scheduler.module.js';
+import { CgvImaxModule } from './modules/cgv-imax/cgv-imax.module.js';
 import { FridgeModule } from './modules/fridge/fridge.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MealLogModule } from './modules/meal-log/meal-log.module.js';
@@ -42,6 +43,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     MealPlanModule,
     MotivationModule,
     PalworldNewsModule,
+    CgvImaxModule,
     SchedulerModule,
     ProfilerModule,
     ObserveModule.forRoot({

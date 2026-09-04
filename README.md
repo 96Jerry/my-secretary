@@ -143,6 +143,24 @@ PalworldNewsJob
        └─ PalworldNewsRepository.saveGids (발송 성공 후 저장)
 ```
 
+### CGV 용산 IMAX 신규 회차 알림 (1분마다, `CGV_IMAX_CRON`)
+
+```
+CgvImaxJob
+  └─ CgvImaxService.checkForNewShowtimes
+       ├─ CgvScheduleService.fetchScheduleDates (상영일자 목록, 최대 30일)
+       ├─ 평소엔 아직 회차 없는 가까운 7일만, 30분마다 전체 날짜 조회
+       ├─ 날짜별 CgvScheduleService.fetchShowtimes — 요청 간 800ms 딜레이
+       ├─ tcscnsGradCd='03'(아이맥스) + CGV_IMAX_MOVIES 제목 부분일치로 필터
+       ├─ 메모리 캐시와 대조 (기동 후 첫 1회만 CgvImaxRepository.findAllKeys)
+       ├─ 캐시가 비어 있으면 최초 기동 — 알림 없이 회차 키 저장만
+       ├─ MailService.send (새 회차 목록 + 잔여 좌석수)
+       └─ CgvImaxRepository.saveKeys (발송 성공 후 저장)
+```
+
+회차 키는 `상영일:상영관번호:시작시각:영화번호`. 조회 전용이며 예매는 자동화하지 않는다.
+새 회차가 없으면 DB를 건드리지 않는다 — 짧은 폴링 주기에서 Neon 컴퓨트 시간을 아끼기 위한 것.
+
 ### 디스코드 메시지 처리 (입력 어댑터)
 
 ```
@@ -215,6 +233,7 @@ pnpm start:dev
 | `MOTIVATION_CRON`         | `0 6 * * *`  | 동기부여 메시지 발송       |
 | `EVENING_COLLECTION_CRON` | `0 22 * * *` | 식사 기록 + 내일 일정 수집 |
 | `PALWORLD_NEWS_CRON`      | `0 9 * * *`  | 팰월드 패치노트 폴링       |
+| `CGV_IMAX_CRON`           | `* * * * *` | CGV 용산 IMAX 신규 회차 폴링 |
 
 ## 메모
 
