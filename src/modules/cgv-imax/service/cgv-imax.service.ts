@@ -18,19 +18,24 @@ const YONGSAN_IPARK_SITE_NO = '0013';
 // 특별관 등급 코드. 상영관명 문자열 매칭보다 안정적이다(리모델링 시 관 이름은 바뀜).
 const IMAX_GRADE_CD = '03';
 
-// CGV가 주는 날짜가 비정상적으로 늘어나도 요청이 폭주하지 않도록 상한을 둔다.
+// 날짜 목록이 비정상적으로 길어져도 요청이 폭주하지 않도록 둔 상한.
+// 실제로는 5주치(예매 가능 구간 + 아직 안 열린 날짜)가 온다.
 const MAX_DAYS = 30;
 
-// 크롤링 예의: 날짜별 요청 사이 간격.
-const REQUEST_DELAY_MS = 800;
+// searchMovScnInfo는 연속 요청에 민감하다. 실측상 수 분 안에 10여 건이면 403이
+// 떨어지고, 그 상태로 계속 두드리면 도메인 전체가 IP 단위로 차단된다.
+// 일일 총량보다 '버스트'가 문제다.
+//
+// 감시 대상은 '회차가 아예 없던 날짜에 회차가 생기는 것'뿐이다. 이미 열린 날짜의
+// 회차 증설은 보지 않으므로, 한 번 열린 것을 확인한 날짜는 openedDates에 적어두고
+// 다시 묻지 않는다. 그래서 한 주기에 필요한 회차 조회는 '아직 안 열린 가장 가까운
+// 날짜' 하나뿐이고, 예매 오픈은 정확히 거기서 일어난다.
+// CGV가 순서대로 연다는 전제 — 먼 날짜를 건너뛰어 먼저 열면 그 앞 날짜들이
+// 열린 뒤에야 잡힌다. 값을 올리면 그만큼 앞쪽을 넓게 본다.
+const DATES_PER_CYCLE = 1;
 
-// 평소 조회에서 볼 "아직 회차가 열리지 않은" 날짜 개수.
-// 예매 오픈은 현재 열려 있는 구간 바로 다음 날짜부터 순서대로 생기므로,
-// 매번 전체 날짜를 긁지 않아도 오픈 순간을 놓치지 않는다.
-const FRONTIER_DAYS = 7;
-
-// 이미 열린 날짜의 회차 증설은 평소 조회로는 안 잡히므로 주기적으로 전체를 훑는다.
-const FULL_SWEEP_INTERVAL_MS = 30 * 60 * 1000;
+// 위를 2 이상으로 올렸을 때만 쓰이는 요청 간격.
+const REQUEST_DELAY_MS = 3_000;
 
 // 메일 한 통에 담을 최대 회차 수.
 const MAX_MAIL_ROWS = 50;
@@ -52,8 +57,16 @@ export class CgvImaxService {
   // 단일 인스턴스(PM2 fork, instances: 1) 전제라 캐시 정합성 문제는 없다.
   private knownKeys: Set<string> | null = null;
 
-  // 마지막 전체 조회 시각. 0이면 아직 한 번도 안 했다는 뜻이라 즉시 전체를 훑는다.
-  private lastFullSweepAt = 0;
+  // 회차가 실제로 열린 것을 확인한 상영일자. '조회한' 날짜가 아니라 '열린' 날짜다 —
+  // 조회만으로 빼면 아직 안 열린 날짜가 확인 완료로 처리돼 예매 오픈을 놓친다.
+  // knownKeys로도 대신할 수 없다. 거기엔 감시 대상 회차만 담기므로, 회차가 다
+  // 열려 있어도 감시 대상이 없는 날짜는 영원히 미확인으로 남아 매번 다시 긁힌다.
+  private readonly openedDates = new Set<string>();
+
+  // DB가 빈 상태로 기동했다면 이미 열려 있던 회차가 전부 '새 회차'로 보인다.
+  // 한 주기에 한 건씩만 조회하므로 첫 한 바퀴는 여러 주기에 걸치고,
+  // 그동안은 알림 없이 저장만 한다.
+  private bootstrapping = false;
 
   constructor(
     @Inject(CGV_IMAX_REPOSITORY)
@@ -70,7 +83,7 @@ export class CgvImaxService {
       return;
     }
 
-    const known = await this.loadKnownKeys();
+    const known = await this.loadState();
 
     const allDates = (
       await this.cgvSchedule.fetchScheduleDates(YONGSAN_IPARK_SITE_NO)
@@ -80,16 +93,13 @@ export class CgvImaxService {
       return;
     }
 
-    // 짧은 주기로 매번 전체를 긁으면 CGV에 과한 부하가 된다.
-    const isFullSweep =
-      Date.now() - this.lastFullSweepAt >= FULL_SWEEP_INTERVAL_MS;
-    const dates = isFullSweep
-      ? allDates
-      : pickFrontier(allDates, known, FRONTIER_DAYS);
+    const dates = this.pickDates(allDates);
     if (dates.length === 0) return;
 
-    let scannedRows = 0;
     const matched: CgvShowtime[] = [];
+    const newlyOpened: string[] = [];
+    // 회차가 안 열린 날짜에 닿았다는 뜻 — 그 앞은 전부 확인했다는 신호다.
+    let reachedFrontier = false;
     for (const [index, scnYmd] of dates.entries()) {
       if (index > 0) await sleep(REQUEST_DELAY_MS);
       try {
@@ -97,7 +107,12 @@ export class CgvImaxService {
           YONGSAN_IPARK_SITE_NO,
           scnYmd,
         );
-        scannedRows += rows.length;
+        // pickDates는 아직 안 열린 날짜만 주므로 여기서 열림/미열림이 갈린다.
+        if (rows.length > 0) {
+          newlyOpened.push(scnYmd);
+        } else {
+          reachedFrontier = true;
+        }
         matched.push(
           ...rows.filter(
             (row) =>
@@ -106,23 +121,18 @@ export class CgvImaxService {
           ),
         );
       } catch (e) {
-        // 하루치 실패로 전체를 중단하지 않는다. 키를 저장하지 않으므로
+        // 하루치 실패로 전체를 중단하지 않는다. openedDates에 넣지 않으므로
         // 다음 주기에 그 날짜가 자동으로 다시 조회된다.
         this.logger.warn(`CGV ${scnYmd} 조회 실패: ${(e as Error).message}`);
       }
     }
 
-    if (isFullSweep) {
-      this.lastFullSweepAt = Date.now();
-      // 전체를 훑었는데 회차가 하나도 없으면 정상 상황이 아니다. error 레벨이라
-      // DiscordWebhookLogger가 웹훅으로 알려준다.
-      // (평소 조회는 아직 안 열린 날짜만 보므로 0건이 정상 — 여기서 판단하지 않는다.)
-      if (scannedRows === 0) {
-        this.logger.error(
-          `CGV 상영회차가 ${dates.length}개 날짜 전부에서 0건 — API 변경 또는 차단 의심`,
-        );
-        return;
-      }
+    // 알림 발송보다 먼저 저장한다. 여기서 실패하면 다음 주기에 같은 날짜를 다시
+    // 조회할 뿐이고, 반대로 발송만 되고 저장이 빠지면 같은 알림이 반복된다.
+    if (newlyOpened.length > 0) {
+      await this.showtimeRepo.saveOpenedDates(newlyOpened);
+      newlyOpened.forEach((date) => this.openedDates.add(date));
+      this.logger.log(`CGV 회차 오픈 확인: ${newlyOpened.join(', ')}`);
     }
 
     const keyed: KeyedShowtime[] = matched.map((showtime) => ({
@@ -130,10 +140,16 @@ export class CgvImaxService {
       showtime,
     }));
 
-    // 최초 기동: 이미 열려 있던 회차가 한꺼번에 발송되지 않도록 알림 없이 저장만 한다.
-    if (known.size === 0) {
+    // 부트스트랩 중에는 알림 없이 저장만 한다. 열린 날짜는 목록 앞쪽에 몰려 있으므로,
+    // 아직 안 열린 날짜에 닿으면 그 앞은 전부 훑은 것이다.
+    if (this.bootstrapping) {
       await this.persist(keyed.map((item) => item.key));
-      this.logger.log(`CGV IMAX 초기 동기화: ${keyed.length}건 저장`);
+      if (reachedFrontier || allDates.every((d) => this.openedDates.has(d))) {
+        this.bootstrapping = false;
+        this.logger.log(
+          `CGV IMAX 초기 동기화 완료: ${this.knownKeys?.size ?? 0}건`,
+        );
+      }
       return;
     }
 
@@ -156,11 +172,33 @@ export class CgvImaxService {
     );
   }
 
+  /**
+   * 이번 주기에 조회할 날짜. 아직 회차가 안 열린 가장 가까운 쪽부터 고른다.
+   * 전부 열려 있으면 빈 배열 — 그 주기에는 회차 조회를 보내지 않는다.
+   */
+  private pickDates(allDates: string[]): string[] {
+    return allDates
+      .filter((date) => !this.openedDates.has(date))
+      .slice(0, DATES_PER_CYCLE);
+  }
+
   /** 기동 후 첫 호출에서만 DB를 읽고, 이후로는 메모리 캐시를 재사용한다. */
-  private async loadKnownKeys(): Promise<Set<string>> {
+  private async loadState(): Promise<Set<string>> {
     if (this.knownKeys === null) {
-      this.knownKeys = await this.showtimeRepo.findAllKeys();
-      this.logger.log(`CGV IMAX 회차 캐시 적재: ${this.knownKeys.size}건`);
+      const [keys, opened] = await Promise.all([
+        this.showtimeRepo.findAllKeys(),
+        this.showtimeRepo.findOpenedDates(),
+      ]);
+      this.knownKeys = keys;
+      opened.forEach((date) => this.openedDates.add(date));
+      // 감시 대상 회차가 있는 날짜는 열린 날짜가 확실하다. 상영일 테이블이 비어 있는
+      // 첫 배포에서 프런티어까지 하루씩 걸어가지 않도록 키에서도 채운다.
+      // (키는 '상영일:상영관:시작시각:영화번호' 형태라 앞 8자리가 상영일이다.)
+      keys.forEach((key) => this.openedDates.add(key.slice(0, 8)));
+      this.bootstrapping = keys.size === 0;
+      this.logger.log(
+        `CGV IMAX 상태 적재: 회차 ${keys.size}건, 확인된 상영일 ${opened.size}건`,
+      );
     }
     return this.knownKeys;
   }
@@ -172,21 +210,6 @@ export class CgvImaxService {
     keys.forEach((key) => cache.add(key));
     this.knownKeys = cache;
   }
-}
-
-/**
- * 아직 감시 대상 회차를 본 적 없는 날짜를 가까운 순으로 고른다.
- * 새 예매가 열리는 지점이 정확히 여기다.
- */
-function pickFrontier(
-  dates: string[],
-  known: Set<string>,
-  limit: number,
-): string[] {
-  // 키는 '상영일:상영관:시작시각:영화번호' 형태라 앞 8자리가 상영일이다.
-  const seen = new Set<string>();
-  for (const key of known) seen.add(key.slice(0, 8));
-  return dates.filter((date) => !seen.has(date)).slice(0, limit);
 }
 
 function toShowtimeKey(s: CgvShowtime): string {

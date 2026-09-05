@@ -141,7 +141,7 @@ export class EnvironmentVariables {
   // 캐시로 비교하므로 짧은 주기여도 DB와 CGV 양쪽 부하가 크지 않다.
   @IsString()
   @IsOptional()
-  CGV_IMAX_CRON: string = '* * * * *';
+  CGV_IMAX_CRON: string = '*/10 * * * *';
 
   // NestJS Observe 자격 증명
   @IsString()

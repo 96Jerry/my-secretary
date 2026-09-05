@@ -11,7 +11,8 @@ const CO_CD = 'A420';
 const RTCTL_SCOP_CD = '01';
 
 // 봇임을 숨기지 않고 밝힌다. 이 UA로 정상 응답이 오므로 우회가 아니다.
-// Referer가 없으면 403 + HTML 에러페이지가 오기 때문에 함께 보낸다.
+// cgv.co.kr은 Cloudflare 뒤에 있고, UA가 아예 없으면 403 + HTML 에러페이지가
+// 온다. Referer는 없어도 200이지만 출처를 밝히는 의미로 함께 보낸다.
 const HEADERS: Record<string, string> = {
   'User-Agent': 'my-secretary-bot/1.0 (personal showtime notifier)',
   Accept: 'application/json',

@@ -5,4 +5,8 @@ export interface CgvImaxRepository {
   findAllKeys(): Promise<Set<string>>;
   /** 중복 키는 무시하고 저장 */
   saveKeys(keys: string[]): Promise<void>;
+  /** 회차가 열린 것을 확인한 상영일자 전체 */
+  findOpenedDates(): Promise<Set<string>>;
+  /** 중복 날짜는 무시하고 저장 */
+  saveOpenedDates(dates: string[]): Promise<void>;
 }
