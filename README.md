@@ -143,23 +143,31 @@ PalworldNewsJob
        └─ PalworldNewsRepository.saveGids (발송 성공 후 저장)
 ```
 
-### CGV 용산 IMAX 신규 회차 알림 (1분마다, `CGV_IMAX_CRON`)
+### CGV 용산 IMAX 신규 회차 알림 (10분마다, `CGV_IMAX_CRON`)
 
 ```
 CgvImaxJob
   └─ CgvImaxService.checkForNewShowtimes
-       ├─ CgvScheduleService.fetchScheduleDates (상영일자 목록, 최대 30일)
-       ├─ 평소엔 아직 회차 없는 가까운 7일만, 30분마다 전체 날짜 조회
-       ├─ 날짜별 CgvScheduleService.fetchShowtimes — 요청 간 800ms 딜레이
-       ├─ tcscnsGradCd='03'(아이맥스) + CGV_IMAX_MOVIES 제목 부분일치로 필터
+       ├─ 영화별 CgvScheduleService.fetchMovieDates (예매 가능 상영일자)
+       │    └─ 목록에 날짜가 새로 생기는 것 = 그 영화의 예매 오픈 신호
+       ├─ 가장 오래 확인하지 않은 (영화, 날짜)부터 최대 2건 선택
+       │    └─ 새로 생긴 날짜는 확인 이력이 없어 자동으로 맨 앞
+       ├─ CgvScheduleService.fetchMovieShowtimes — 요청 간 3초 딜레이
+       ├─ siteNo='0013' + tcscnsGradCd='03'(아이맥스)로 필터
+       │    └─ 응답에는 같은 건물의 씨네드쉐프 용산(P013) 회차가 섞여 온다
        ├─ 메모리 캐시와 대조 (기동 후 첫 1회만 CgvImaxRepository.findAllKeys)
-       ├─ 캐시가 비어 있으면 최초 기동 — 알림 없이 회차 키 저장만
+       ├─ 초기 동기화가 안 끝난 영화면 알림 없이 회차 키 저장만
        ├─ MailService.send (새 회차 목록 + 잔여 좌석수)
        └─ CgvImaxRepository.saveKeys (발송 성공 후 저장)
 ```
 
-회차 키는 `상영일:상영관번호:시작시각:영화번호`. 조회 전용이며 예매는 자동화하지 않는다.
-새 회차가 없으면 DB를 건드리지 않는다 — 짧은 폴링 주기에서 Neon 컴퓨트 시간을 아끼기 위한 것.
+회차 키는 `극장번호:상영일:상영관번호:시작시각:영화번호`. 조회 전용이며 예매는
+자동화하지 않는다. 새 회차가 없으면 DB를 건드리지 않는다 — 짧은 폴링 주기에서
+Neon 컴퓨트 시간을 아끼기 위한 것.
+
+감시 영화의 예매 가능 날짜는 한 자릿수라, 전체를 한 바퀴 도는 데 대략
+`(날짜 수 / 2) * 폴링주기`가 걸린다. 이미 열린 날짜에 IMAX 회차가 나중에
+배정되는 경우를 잡기 위해 확인이 끝난 날짜도 계속 돌려 본다.
 
 ### 디스코드 메시지 처리 (입력 어댑터)
 
@@ -233,7 +241,7 @@ pnpm start:dev
 | `MOTIVATION_CRON`         | `0 6 * * *`  | 동기부여 메시지 발송       |
 | `EVENING_COLLECTION_CRON` | `0 22 * * *` | 식사 기록 + 내일 일정 수집 |
 | `PALWORLD_NEWS_CRON`      | `0 9 * * *`  | 팰월드 패치노트 폴링       |
-| `CGV_IMAX_CRON`           | `* * * * *` | CGV 용산 IMAX 신규 회차 폴링 |
+| `CGV_IMAX_CRON`           | `*/10 * * * *` | CGV 용산 IMAX 신규 회차 폴링 |
 
 ## 메모
 
