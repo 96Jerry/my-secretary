@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { CgvImaxRepository } from '../domain/cgv-imax.repository.js';
-import { CgvImaxOpenedDateOrmEntity } from './cgv-imax-opened-date.orm-entity.js';
+import { CgvImaxMovieStateOrmEntity } from './cgv-imax-movie-state.orm-entity.js';
 import { CgvImaxShowtimeOrmEntity } from './cgv-imax-showtime.orm-entity.js';
 
 @Injectable()
@@ -11,8 +11,8 @@ export class CgvImaxTypeormRepository implements CgvImaxRepository {
   constructor(
     @InjectRepository(CgvImaxShowtimeOrmEntity)
     private readonly repo: Repository<CgvImaxShowtimeOrmEntity>,
-    @InjectRepository(CgvImaxOpenedDateOrmEntity)
-    private readonly openedDateRepo: Repository<CgvImaxOpenedDateOrmEntity>,
+    @InjectRepository(CgvImaxMovieStateOrmEntity)
+    private readonly movieStateRepo: Repository<CgvImaxMovieStateOrmEntity>,
   ) {}
 
   async findAllKeys(): Promise<Set<string>> {
@@ -31,18 +31,17 @@ export class CgvImaxTypeormRepository implements CgvImaxRepository {
       .execute();
   }
 
-  async findOpenedDates(): Promise<Set<string>> {
-    const rows = await this.openedDateRepo.find({ select: { scnYmd: true } });
-    return new Set(rows.map((row) => row.scnYmd));
+  async findBootstrappedMovies(): Promise<Set<string>> {
+    const rows = await this.movieStateRepo.find({ select: { movNo: true } });
+    return new Set(rows.map((row) => row.movNo));
   }
 
-  async saveOpenedDates(dates: string[]): Promise<void> {
-    if (dates.length === 0) return;
-    await this.openedDateRepo
+  async markBootstrapped(movNo: string): Promise<void> {
+    await this.movieStateRepo
       .createQueryBuilder()
       .insert()
-      .into(CgvImaxOpenedDateOrmEntity)
-      .values(dates.map((scnYmd) => ({ scnYmd })))
+      .into(CgvImaxMovieStateOrmEntity)
+      .values({ movNo })
       .orIgnore()
       .execute();
   }
