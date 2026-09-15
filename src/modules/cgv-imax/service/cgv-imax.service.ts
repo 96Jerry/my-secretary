@@ -31,6 +31,12 @@ const SHOWTIME_LOOKUPS_PER_CYCLE = 2;
 // 같은 주기에 여러 건을 조회할 때의 요청 간격.
 const REQUEST_DELAY_MS = 3_000;
 
+// 날짜 목록 조회가 이만큼 연속으로 실패하면 감시가 멈춘 것으로 보고 알린다.
+const DEAD_CYCLES_BEFORE_ALERT = 3;
+
+// 복구되지 않는 동안 같은 알림을 되풀이하는 간격(주기 수).
+const DEAD_CYCLE_ALERT_INTERVAL = 18;
+
 // 메일 한 통에 담을 최대 회차 수.
 const MAX_MAIL_ROWS = 50;
 
@@ -75,6 +81,11 @@ export class CgvImaxService {
   // 시도만으로 판정하면 실패한 날짜의 기존 회차가 나중에 신규로 오탐된다.
   private readonly checkedDates = new Set<string>();
 
+  // 날짜 목록 조회가 연속으로 실패한 주기 수. 이 조회는 매 주기 반드시 나가므로,
+  // 값이 쌓인다는 것은 차단이나 스펙 변경으로 감시가 멈췄다는 뜻이다.
+  // 개별 실패는 warn이라 디스코드까지 가지 않아, 일정 횟수부터 error로 올린다.
+  private deadCycles = 0;
+
   constructor(
     @Inject(CGV_IMAX_REPOSITORY)
     private readonly showtimeRepo: CgvImaxRepository,
@@ -94,6 +105,7 @@ export class CgvImaxService {
 
     // 1단계: 영화별 예매 가능 날짜. 목록에 날짜가 새로 생기는 것이 예매 오픈 신호다.
     const live = await this.refreshWatchDates(movies);
+    this.trackReachability(live.length > 0);
     if (live.length === 0) return;
 
     // 2단계: 가장 오래 확인하지 않은 날짜부터 회차를 본다. 새로 생긴 날짜는
@@ -138,6 +150,30 @@ export class CgvImaxService {
       }
     }
     return live;
+  }
+
+  /**
+   * 감시 영화의 날짜 목록을 하나도 받지 못한 주기를 센다.
+   * 한두 번은 일시적인 실패지만, 계속 이어지면 조용히 멈춘 것이므로 알린다.
+   */
+  private trackReachability(reachable: boolean): void {
+    if (reachable) {
+      if (this.deadCycles >= DEAD_CYCLES_BEFORE_ALERT) {
+        this.logger.log(`CGV 조회 복구 — ${this.deadCycles}주기 만에 정상화`);
+      }
+      this.deadCycles = 0;
+      return;
+    }
+
+    this.deadCycles += 1;
+    if (
+      this.deadCycles === DEAD_CYCLES_BEFORE_ALERT ||
+      this.deadCycles % DEAD_CYCLE_ALERT_INTERVAL === 0
+    ) {
+      this.logger.error(
+        `CGV 상영일자 조회가 ${this.deadCycles}주기 연속 실패 — IMAX 회차 감시가 멈춰 있습니다`,
+      );
+    }
   }
 
   /**
