@@ -120,6 +120,10 @@ export class CgvImaxService {
       return;
     }
 
+    // 날짜 목록과 회차를 붙여서 쏘면 주기마다 2건짜리 버스트가 된다.
+    // 감지 속도와 무관한 비용이라 사이를 띄운다.
+    await sleep(REQUEST_DELAY_MS);
+
     // 2단계: 가장 오래 확인하지 않은 날짜부터 회차를 본다. 새로 생긴 날짜는
     // 확인 이력이 없으므로 자동으로 맨 앞에 선다.
     const { found, trace: lookupTrace } = await this.lookupShowtimes(

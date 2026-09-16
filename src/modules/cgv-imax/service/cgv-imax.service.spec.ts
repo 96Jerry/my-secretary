@@ -1,5 +1,11 @@
 import { Logger } from '@nestjs/common';
 
+// 요청 사이 지연은 CGV에 대한 예의이지 검증 대상이 아니다. 테스트에서는 건너뛴다.
+// 가짜 타이머는 node:timers/promises에 닿지 않으므로 모듈째 대체한다.
+jest.mock('node:timers/promises', () => ({
+  setTimeout: (): Promise<void> => Promise.resolve(),
+}));
+
 import type { EnvironmentVariables } from '@config/index.js';
 import { CgvScheduleService } from '@infra/cgv/cgv-schedule.service.js';
 import type { MailService, SendMailOptions } from '@infra/mail/mail.service.js';
