@@ -94,23 +94,37 @@ export class CgvImaxService {
     private readonly env: EnvironmentVariables,
   ) {}
 
+  /**
+   * 한 주기의 전 과정을 한 줄로 남긴다. 아무 일도 없는 주기가 대부분이므로,
+   * 조용히 끝나면 '돌았는데 할 일이 없었다'와 '안 돌았다'를 구분할 수 없다.
+   * 나중에 로그만 보고 어디까지 갔는지 되짚을 수 있어야 한다.
+   */
   async checkForNewShowtimes(): Promise<void> {
+    const startedAt = Date.now();
+
     const movies = parseWatchList(this.env.CGV_IMAX_MOVIES, this.logger);
     if (movies.length === 0) {
-      this.logger.warn('CGV_IMAX_MOVIES가 비어 있어 감시를 건너뜁니다');
+      this.logger.warn('CGV 주기 중단 — CGV_IMAX_MOVIES가 비어 있음');
       return;
     }
 
     const known = await this.loadState();
 
     // 1단계: 영화별 예매 가능 날짜. 목록에 날짜가 새로 생기는 것이 예매 오픈 신호다.
-    const live = await this.refreshWatchDates(movies);
+    const { live, trace: dateTrace } = await this.refreshWatchDates(movies);
     this.trackReachability(live.length > 0);
-    if (live.length === 0) return;
+    if (live.length === 0) {
+      this.logger.warn(
+        `CGV 주기 중단 (${elapsed(startedAt)}) — 날짜조회: ${dateTrace}`,
+      );
+      return;
+    }
 
     // 2단계: 가장 오래 확인하지 않은 날짜부터 회차를 본다. 새로 생긴 날짜는
     // 확인 이력이 없으므로 자동으로 맨 앞에 선다.
-    const found = await this.lookupShowtimes(this.pickTargets(live));
+    const { found, trace: lookupTrace } = await this.lookupShowtimes(
+      this.pickTargets(live),
+    );
 
     const fresh = dedupeByKey(found).filter((item) => !known.has(item.key));
     // 초기 동기화가 끝나지 않은 영화의 회차는 조용히 저장만 한다.
@@ -127,13 +141,26 @@ export class CgvImaxService {
     }
 
     await this.markCompletedBootstraps(live);
+
+    const result =
+      notify.length > 0
+        ? `신규 ${fresh.length}건 발송`
+        : fresh.length > 0
+          ? `신규 ${fresh.length}건 저장만(초기 동기화 중)`
+          : '신규 없음';
+    this.logger.log(
+      `CGV 주기 완료 (${elapsed(startedAt)}) — ` +
+        `날짜 ${dateTrace} | 회차 ${lookupTrace} | ${result}`,
+    );
   }
 
   /** 영화별 상영일자를 새로 받는다. 조회에 성공한 영화만 이번 주기의 대상이다. */
   private async refreshWatchDates(
     movies: WatchedMovie[],
-  ): Promise<WatchedMovie[]> {
+  ): Promise<{ live: WatchedMovie[]; trace: string }> {
     const live: WatchedMovie[] = [];
+    const trace: string[] = [];
+
     for (const [index, movie] of movies.entries()) {
       if (index > 0) await sleep(REQUEST_DELAY_MS);
       try {
@@ -141,15 +168,29 @@ export class CgvImaxService {
           YONGSAN_IPARK_SITE_NO,
           movie.movNo,
         );
+        // 목록에 없던 날짜가 곧 예매 오픈이다. 나중에 로그에서 그 순간을
+        // 짚을 수 있도록 따로 남긴다. 첫 조회는 전부 새 날짜라 건너뛴다.
+        const previous = this.watchDates.get(movie.movNo);
+        const added = previous
+          ? dates.filter((scnYmd) => !previous.includes(scnYmd))
+          : [];
+        if (added.length > 0) {
+          this.logger.log(
+            `CGV 예매 오픈 감지 — ${movie.label}: ${added.join(', ')}`,
+          );
+        }
+
         this.watchDates.set(movie.movNo, dates);
         live.push(movie);
+        trace.push(`${movie.label} ${describeDates(dates)}`);
       } catch (e) {
         this.logger.warn(
           `CGV 상영일자 조회 실패 (${movie.label}): ${(e as Error).message}`,
         );
+        trace.push(`${movie.label} 실패`);
       }
     }
-    return live;
+    return { live, trace: trace.join(', ') };
   }
 
   /**
@@ -199,8 +240,14 @@ export class CgvImaxService {
 
   private async lookupShowtimes(
     targets: LookupTarget[],
-  ): Promise<CgvShowtime[]> {
+  ): Promise<{ found: CgvShowtime[]; trace: string }> {
+    if (targets.length === 0) {
+      return { found: [], trace: '조회 대상 없음' };
+    }
+
     const found: CgvShowtime[] = [];
+    const trace: string[] = [];
+
     for (const [index, target] of targets.entries()) {
       if (index > 0) await sleep(REQUEST_DELAY_MS);
 
@@ -213,22 +260,26 @@ export class CgvImaxService {
           target.scnYmd,
         );
         this.checkedDates.add(dateKey);
-        found.push(
-          ...rows.filter(
-            (row) =>
-              row.siteNo === YONGSAN_IPARK_SITE_NO &&
-              row.movNo === target.movie.movNo &&
-              row.tcscnsGradCd === IMAX_GRADE_CD,
-          ),
+
+        const imax = rows.filter(
+          (row) =>
+            row.siteNo === YONGSAN_IPARK_SITE_NO &&
+            row.movNo === target.movie.movNo &&
+            row.tcscnsGradCd === IMAX_GRADE_CD,
+        );
+        found.push(...imax);
+        trace.push(
+          `${target.movie.label} ${target.scnYmd} ${rows.length}건→IMAX ${imax.length}건`,
         );
       } catch (e) {
         // 하루치 실패로 전체를 중단하지 않는다. 다음 순번에 다시 조회된다.
         this.logger.warn(
           `CGV 회차 조회 실패 (${target.movie.label} ${target.scnYmd}): ${(e as Error).message}`,
         );
+        trace.push(`${target.movie.label} ${target.scnYmd} 실패`);
       }
     }
-    return found;
+    return { found, trace: trace.join(', ') };
   }
 
   private async sendMail(
@@ -300,6 +351,17 @@ export class CgvImaxService {
     keys.forEach((key) => cache.add(key));
     this.knownKeys = cache;
   }
+}
+
+function elapsed(startedAt: number): string {
+  return `${((Date.now() - startedAt) / 1000).toFixed(1)}s`;
+}
+
+// 날짜 목록은 길어서 그대로 찍으면 한 줄을 다 먹는다. 개수와 구간만 남겨도
+// 예매 창이 밀렸는지 넓어졌는지는 충분히 드러난다.
+function describeDates(dates: string[]): string {
+  if (dates.length === 0) return '0일';
+  return `${dates.length}일(${dates[0]}~${dates[dates.length - 1]})`;
 }
 
 function toDateKey(target: LookupTarget): string {

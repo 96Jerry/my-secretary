@@ -100,7 +100,7 @@ export class CgvScheduleService {
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     if (!res.ok) {
-      throw new Error(`CGV 응답 실패: ${res.status} ${res.statusText}`);
+      throw new Error(`CGV 응답 실패: ${describeStatus(res)}`);
     }
     // 차단당하면 200이 아니라 403 + HTML이 온다. json() 전에 반드시 확인해야
     // "Unexpected token '<'" 대신 원인이 드러나는 메시지가 남는다.
@@ -148,6 +148,13 @@ function toShowtime(entry: unknown): CgvShowtime | null {
     frSeatCnt: readCount(row.frSeatCnt),
     cpSeatCnt: readCount(row.cpSeatCnt),
   };
+}
+
+// HTTP/2에는 reason phrase가 없어 statusText가 빈 문자열로 온다.
+function describeStatus(res: Response): string {
+  return res.statusText === ''
+    ? String(res.status)
+    : `${res.status} ${res.statusText}`;
 }
 
 function readString(value: unknown): string | null {

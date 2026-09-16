@@ -18,6 +18,9 @@ export class CgvImaxJob {
     timeZone: 'Asia/Seoul',
   })
   async run(): Promise<void> {
+    // 크론이 실제로 발화했다는 사실 자체를 남긴다. 이 줄이 없으면 스케줄러가
+    // 안 돈 것인지 돌았는데 조용히 끝난 것인지 로그로 구분할 수 없다.
+    this.logger.log('CGV 크론 발화');
     await this.doWork();
   }
 
@@ -25,6 +28,8 @@ export class CgvImaxJob {
     try {
       await this.cgvImaxService.checkForNewShowtimes();
     } catch (e) {
+      // 개별 실패는 서비스가 warn으로 남기므로, 여기까지 올라온 것은
+      // 주기 자체가 깨진 경우다. 스택까지 디스코드로 보낸다.
       this.logger.error(
         `CGV IMAX 회차 잡 실패: ${(e as Error).message}`,
         (e as Error).stack,
