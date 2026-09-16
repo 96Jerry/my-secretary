@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { env } from '@config/index.js';
 import { CgvImaxService } from '@modules/cgv-imax/service/cgv-imax.service.js';
+
+// 크론이 매번 정확히 같은 초에 같은 요청을 보내면 그 규칙성 자체가 봇 신호가 된다.
+// 주기마다 최대 이만큼 무작위로 흘려보낸다. 폴링 주기보다 충분히 짧아야 한다.
+const MAX_JITTER_MS = 90_000;
 
 @Injectable()
 export class CgvImaxJob {
@@ -20,7 +25,9 @@ export class CgvImaxJob {
   async run(): Promise<void> {
     // 크론이 실제로 발화했다는 사실 자체를 남긴다. 이 줄이 없으면 스케줄러가
     // 안 돈 것인지 돌았는데 조용히 끝난 것인지 로그로 구분할 수 없다.
-    this.logger.log('CGV 크론 발화');
+    const jitterMs = Math.floor(Math.random() * MAX_JITTER_MS);
+    this.logger.log(`CGV 크론 발화 — 지터 ${Math.round(jitterMs / 1000)}초 대기`);
+    await sleep(jitterMs);
     await this.doWork();
   }
 
