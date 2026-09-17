@@ -3,8 +3,6 @@ import { Cron } from '@nestjs/schedule';
 
 import { env, EnvironmentVariables } from '@config/index.js';
 import { MealPlanService } from '@modules/meal-plan/service/meal-plan.service.js';
-import { UserService } from '@modules/user/service/user.service.js';
-import { DiscordService } from '../../discord/discord.service.js';
 import { ResourceProfilerService } from '@infra/profiler/resource-profiler.service.js';
 
 @Injectable()
@@ -14,8 +12,6 @@ export class DailyMealPlanJob {
   constructor(
     private readonly envVars: EnvironmentVariables,
     private readonly mealPlanService: MealPlanService,
-    private readonly userService: UserService,
-    private readonly discordService: DiscordService,
     private readonly resourceProfiler: ResourceProfilerService,
   ) {}
 
@@ -37,11 +33,5 @@ export class DailyMealPlanJob {
         (e as Error).stack,
       );
     }
-
-    const discordUsers = await this.userService.findAllWithGuildId();
-    this.logger.log(`Discord 사용자 ${discordUsers.length}명 미설정 검사 시작`);
-    await Promise.allSettled(
-      discordUsers.map((u) => this.discordService.notifyIfMissingSettings(u)),
-    );
   }
 }

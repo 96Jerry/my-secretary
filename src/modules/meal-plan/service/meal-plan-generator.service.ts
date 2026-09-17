@@ -22,6 +22,12 @@ export interface MealPlanContext {
   recentMeals: unknown[];
 }
 
+export interface GeneratedMealPlan {
+  content: string;
+  // 입력되지 않아 식단에 반영되지 못한 정보 (예: 냉장고, 일정)
+  missingLabels: string[];
+}
+
 @Injectable()
 export class MealPlanGeneratorService {
   constructor(
@@ -34,10 +40,11 @@ export class MealPlanGeneratorService {
     private readonly claudeService: ClaudeService,
   ) {}
 
-  async generate(userId: string, date: string): Promise<string> {
+  async generate(userId: string, date: string): Promise<GeneratedMealPlan> {
     const context = await this.collectContext(userId, date);
     const prompt = buildGenerateMealPlanPrompt(context);
-    return this.claudeService.run(prompt);
+    const content = await this.claudeService.run(prompt);
+    return { content, missingLabels: findMissingLabels(context) };
   }
 
   private async collectContext(
@@ -69,4 +76,15 @@ export class MealPlanGeneratorService {
       })),
     };
   }
+}
+
+// 상황은 선택 입력이라 제외. Discord 온보딩의 필수 4개와 동일.
+function findMissingLabels(ctx: MealPlanContext): string[] {
+  const required: [string, Record<string, unknown> | null][] = [
+    ['냉장고', ctx.fridge],
+    ['건강', ctx.health],
+    ['선호', ctx.preference],
+    ['일정', ctx.schedule],
+  ];
+  return required.filter(([, data]) => !data).map(([label]) => label);
 }
