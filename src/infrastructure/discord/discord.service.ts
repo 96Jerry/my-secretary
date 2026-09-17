@@ -265,6 +265,14 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
+    if (parsed.intent === 'unparsed') {
+      const tail = await this.tailFor(user.id, false);
+      await msg.reply(
+        `응답을 해석하지 못했습니다: ${parsed.raw.slice(0, 200)}${tail}`,
+      );
+      return;
+    }
+
     const { pending: next, lines } = await this.previewPending(
       user.id,
       parsed,
@@ -286,7 +294,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   // LLM 요약 대신 현재 저장된 상태와 비교한 실제 변경 내역을 만든다.
   private async previewPending(
     userId: string,
-    parsed: Exclude<ParsedIntent, { intent: 'other' }>,
+    parsed: Exclude<ParsedIntent, { intent: 'other' | 'unparsed' }>,
     ctx: IntentContext,
   ): Promise<PendingPreview> {
     switch (parsed.intent) {

@@ -28,7 +28,9 @@ export type ParsedIntent =
       slot: MealSlot;
       data: Record<string, unknown>;
     }
-  | { intent: 'other' };
+  | { intent: 'other' }
+  // LLM 응답이 JSON이 아니거나 intent가 목록 밖이라 판단 결과로 볼 수 없음.
+  | { intent: 'unparsed'; raw: string };
 
 export interface IntentContext {
   today: string;
@@ -138,7 +140,11 @@ export class IntentParserService {
       this.logger.warn(
         `의도 파싱 실패: ${(err as Error).message}. raw=${raw.slice(0, 200)}`,
       );
-      return { intent: 'other' };
+      return { intent: 'unparsed', raw };
+    }
+    if (typeof obj !== 'object' || obj === null) {
+      this.logger.warn(`의도 파싱 실패: 객체 아님. raw=${raw.slice(0, 200)}`);
+      return { intent: 'unparsed', raw };
     }
 
     const data =
@@ -176,8 +182,11 @@ export class IntentParserService {
           data,
         };
       }
-      default:
+      case 'other':
         return { intent: 'other' };
+      default:
+        this.logger.warn(`알 수 없는 intent. raw=${raw.slice(0, 200)}`);
+        return { intent: 'unparsed', raw };
     }
   }
 }
