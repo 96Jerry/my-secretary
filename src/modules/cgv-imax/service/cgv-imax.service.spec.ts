@@ -21,6 +21,7 @@ interface RowOverrides {
   siteNm?: string;
   scnsNo?: string;
   scnsNm?: string;
+  scnYmd?: string;
   scnsrtTm?: string;
   tcscnsGradCd?: string;
   movNo?: string;
@@ -203,7 +204,34 @@ describe('CgvImaxService', () => {
   describe('예매 오픈 감지', () => {
     it.todo('날짜 목록에 없던 날짜가 생기면 다음 주기에 회차를 조회한다');
     it.todo('예매 전(날짜 0건)이어도 초기 동기화를 완료 처리한다');
-    it.todo('이미 열린 날짜에 IMAX 회차가 추가되어도 잡아낸다');
+    // 날짜 목록은 같은 건물의 씨네드쉐프 회차만 있어도 날짜를 내준다. 그 날짜는
+    // IMAX 0건으로 확인이 끝나 순번이 뒤로 밀리므로, 나중에 배정된 IMAX가
+    // 날짜 한 바퀴를 다 돌 때까지 늦게 잡히던 문제.
+    it('IMAX 없이 열린 날짜에 IMAX가 배정되면 한 바퀴를 기다리지 않고 잡는다', async () => {
+      const imaxDays = ['20991201', '20991202', '20991203', '20991204'];
+      const lateDay = '20991205';
+      cgv.dates = [...imaxDays, lateDay];
+      for (const scnYmd of imaxDays) {
+        cgv.rowsByDate.set(scnYmd, [row({ scnYmd })]);
+      }
+      cgv.rowsByDate.set(lateDay, [
+        row({
+          scnYmd: lateDay,
+          siteNo: 'P013',
+          scnsNo: '002',
+          tcscnsGradCd: '01',
+        }),
+      ]);
+      await runCycles(5); // 초기 동기화
+      expect(repo.bootstrapped.has(MOV_NO)).toBe(true);
+      expect(mails).toHaveLength(0);
+
+      cgv.rowsByDate.set(lateDay, [row({ scnYmd: lateDay })]);
+      await runCycles(2);
+
+      expect(mails).toHaveLength(1);
+      expect(repo.keys.has(`0013:${lateDay}:018:0730:${MOV_NO}`)).toBe(true);
+    });
   });
 
   describe('중복 발송', () => {

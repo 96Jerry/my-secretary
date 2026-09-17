@@ -24,8 +24,9 @@ const IMAX_GRADE_CD = '03';
 //
 // 예매 오픈 감지 속도는 이 값과 무관하다. 새로 생긴 날짜는 확인 이력이 없어
 // 항상 대기열 맨 앞에 서므로 값이 1이어도 바로 다음 주기에 잡힌다.
-// 이 값이 바꾸는 것은 '이미 열린 날짜에 IMAX가 나중에 배정되는' 경우를 훑는
-// 한 바퀴 시간뿐이다 — 7일치 기준 (7 / 이 값) * 폴링주기.
+// 이 값이 바꾸는 것은 이미 IMAX가 있는 날짜에 회차가 추가되는 경우를 훑는
+// 한 바퀴 시간이다. IMAX가 아직 없는 날짜는 격주기로 먼저 보므로 이 값과 무관하게
+// 최대 2주기 안에 다시 확인된다 — pickTargets 참고.
 const SHOWTIME_LOOKUPS_PER_CYCLE = 1;
 
 // 같은 주기에 여러 건을 조회할 때의 요청 간격.
@@ -80,6 +81,14 @@ export class CgvImaxService {
   // 회차 조회에 '성공한' 날짜. 초기 동기화 완료 판정은 이쪽을 본다 —
   // 시도만으로 판정하면 실패한 날짜의 기존 회차가 나중에 신규로 오탐된다.
   private readonly checkedDates = new Set<string>();
+
+  // 마지막 조회 성공 때 IMAX 회차가 있던 날짜. 날짜 목록은 같은 건물의 씨네드쉐프
+  // 회차만 있어도 날짜를 내주므로, 날짜가 열린 뒤에 IMAX가 배정되는 경우가 있다.
+  // 여기 없는 날짜는 IMAX가 아직 없거나 확인 전이라 우선 다시 본다.
+  private readonly imaxDates = new Set<string>();
+
+  // IMAX 없는 날짜 우선과 확인이 오래된 순을 번갈아 쓰기 위한 주기 번호.
+  private pickCount = 0;
 
   // 날짜 목록 조회가 연속으로 실패한 주기 수. 이 조회는 매 주기 반드시 나가므로,
   // 값이 쌓인다는 것은 차단이나 스펙 변경으로 감시가 멈췄다는 뜻이다.
@@ -224,6 +233,9 @@ export class CgvImaxService {
   /**
    * 이번 주기에 회차를 조회할 (영화, 날짜). 확인이 가장 오래된 순,
    * 같으면 가까운 날짜 순이다.
+   *
+   * 격주기로는 IMAX가 아직 없는 날짜를 먼저 본다. 매 주기 그렇게 하면
+   * IMAX 없는 날짜가 하나만 있어도 IMAX가 있는 날짜의 재확인이 영영 밀린다.
    */
   private pickTargets(live: WatchedMovie[]): LookupTarget[] {
     const candidates: LookupTarget[] = live.flatMap((movie) =>
@@ -232,9 +244,16 @@ export class CgvImaxService {
         scnYmd,
       })),
     );
+    const preferNoImax = this.pickCount++ % 2 === 0;
 
     return candidates
       .sort((a, b) => {
+        if (preferNoImax) {
+          const byImax =
+            Number(this.imaxDates.has(toDateKey(a))) -
+            Number(this.imaxDates.has(toDateKey(b)));
+          if (byImax !== 0) return byImax;
+        }
         const attemptedA = this.lastAttemptAt.get(toDateKey(a)) ?? 0;
         const attemptedB = this.lastAttemptAt.get(toDateKey(b)) ?? 0;
         return attemptedA - attemptedB || a.scnYmd.localeCompare(b.scnYmd);
@@ -271,6 +290,11 @@ export class CgvImaxService {
             row.movNo === target.movie.movNo &&
             row.tcscnsGradCd === IMAX_GRADE_CD,
         );
+        if (imax.length > 0) {
+          this.imaxDates.add(dateKey);
+        } else {
+          this.imaxDates.delete(dateKey);
+        }
         found.push(...imax);
         trace.push(
           `${target.movie.label} ${target.scnYmd} ${rows.length}건→IMAX ${imax.length}건`,
