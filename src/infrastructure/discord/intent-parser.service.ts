@@ -17,36 +17,18 @@ const VALID_SLOTS: ReadonlySet<MealSlot> = new Set([
 const VALID_UNITS: ReadonlySet<string> = new Set(['g', 'ml', '개']);
 
 export type ParsedIntent =
-  | { intent: 'update_fridge'; changes: FridgeChange[]; summary: string }
-  | {
-      intent: 'update_health';
-      data: Record<string, unknown>;
-      summary: string;
-    }
-  | {
-      intent: 'update_preference';
-      data: Record<string, unknown>;
-      summary: string;
-    }
-  | {
-      intent: 'update_schedule';
-      date: string;
-      data: Record<string, unknown>;
-      summary: string;
-    }
-  | {
-      intent: 'update_situation';
-      data: Record<string, unknown>;
-      summary: string;
-    }
+  | { intent: 'update_fridge'; changes: FridgeChange[] }
+  | { intent: 'update_health'; data: Record<string, unknown> }
+  | { intent: 'update_preference'; data: Record<string, unknown> }
+  | { intent: 'update_schedule'; date: string; data: Record<string, unknown> }
+  | { intent: 'update_situation'; data: Record<string, unknown> }
   | {
       intent: 'update_meal_log';
       date: string;
       slot: MealSlot;
       data: Record<string, unknown>;
-      summary: string;
     }
-  | { intent: 'other'; summary: string };
+  | { intent: 'other' };
 
 export interface IntentContext {
   today: string;
@@ -105,11 +87,10 @@ export class IntentParserService {
       `<rules>`,
       `1. 메시지에 여러 의도가 섞여 있어도 가장 비중 큰 1개만 선택한다.`,
       `2. 선택한 도메인은 diff가 아닌 **전체 최종 상태**로 출력한다 — 메시지에서 바뀌지 않은 필드는 current_state 값을 그대로 복사해 포함한다. (단 update_fridge와 update_meal_log는 예외이며 아래 규칙을 따른다.)`,
-      `3. summary는 한국어 1~2문장, 변경 포인트 위주의 자연스러운 톤으로 작성한다.`,
-      `4. 의도가 모호하거나 위 6개 도메인에 해당하지 않으면 other로 분류한다.`,
-      `5. update_meal_log은 메시지에서 끼니(아침/점심/저녁)가 명시적으로 식별되어야만 출력한다. 식별 불가 시 other.`,
-      `6. update_meal_log의 slot은 정확히 breakfast|lunch|dinner 중 하나. 한국어 표현은 매핑한다 (아침→breakfast, 점심→lunch, 저녁→dinner).`,
-      `7. 출력은 JSON 객체 1개만. 코드펜스·주석·전후 텍스트 금지.`,
+      `3. 의도가 모호하거나 위 6개 도메인에 해당하지 않으면 other로 분류한다.`,
+      `4. update_meal_log은 메시지에서 끼니(아침/점심/저녁)가 명시적으로 식별되어야만 출력한다. 식별 불가 시 other.`,
+      `5. update_meal_log의 slot은 정확히 breakfast|lunch|dinner 중 하나. 한국어 표현은 매핑한다 (아침→breakfast, 점심→lunch, 저녁→dinner).`,
+      `6. 출력은 JSON 객체 1개만. 코드펜스·주석·전후 텍스트 금지.`,
       `</rules>`,
       ``,
       `<fridge_rules>`,
@@ -121,18 +102,18 @@ export class IntentParserService {
       `quantity는 반드시 숫자, unit은 정확히 g|ml|개 중 하나로 변환한다 (1kg→1000 g, 1L→1000 ml, 한 팩·한 봉지 등 셀 수 있는 단위→개).`,
       `unit을 알 수 없거나 셋으로 변환이 불가능한 아이템은 changes에서 제외한다.`,
       `expiresAt은 메시지에 유통기한이 명시된 경우만 ISO YYYY-MM-DD로 넣고, 없으면 null.`,
+      `name은 current_state 냉장고에 같은 식재료가 다른 표기로 있으면 새 이름을 만들지 말고 기존 이름을 그대로 쓴다.`,
       `adjust 대상이 current_state 냉장고에 없으면 그 아이템은 제외한다.`,
       `</fridge_rules>`,
-      `</rules>`,
       ``,
       `<output_schema>`,
-      `update_fridge     → { "intent":"update_fridge",     "changes":[{"op":"set","name":string,"quantity":number,"unit":"g|ml|개","expiresAt":"YYYY-MM-DD"|null} | {"op":"adjust","name":string,"quantity":number} | {"op":"remove","name":string}], "summary":string }`,
-      `update_health     → { "intent":"update_health",     "data":{...최종 건강 상태},                          "summary":string }`,
-      `update_preference → { "intent":"update_preference", "data":{...최종 선호 상태},                          "summary":string }`,
-      `update_schedule   → { "intent":"update_schedule",   "date":"YYYY-MM-DD", "data":{...해당 날짜의 최종 일정}, "summary":string }`,
-      `update_situation  → { "intent":"update_situation",  "data":{household,kitchenLevel,budgetLevel,...},     "summary":string }`,
-      `update_meal_log   → { "intent":"update_meal_log",   "date":"YYYY-MM-DD", "slot":"breakfast|lunch|dinner", "data":{name,mode,mainIngredients,method,notes?}, "summary":string }`,
-      `other             → { "intent":"other", "summary":string }`,
+      `update_fridge     → { "intent":"update_fridge",     "changes":[{"op":"set","name":string,"quantity":number,"unit":"g|ml|개","expiresAt":"YYYY-MM-DD"|null} | {"op":"adjust","name":string,"quantity":number} | {"op":"remove","name":string}] }`,
+      `update_health     → { "intent":"update_health",     "data":{...최종 건강 상태} }`,
+      `update_preference → { "intent":"update_preference", "data":{...최종 선호 상태} }`,
+      `update_schedule   → { "intent":"update_schedule",   "date":"YYYY-MM-DD", "data":{...해당 날짜의 최종 일정} }`,
+      `update_situation  → { "intent":"update_situation",  "data":{household,kitchenLevel,budgetLevel,...} }`,
+      `update_meal_log   → { "intent":"update_meal_log",   "date":"YYYY-MM-DD", "slot":"breakfast|lunch|dinner", "data":{name,mode,mainIngredients,method,notes?} }`,
+      `other             → { "intent":"other" }`,
       `</output_schema>`,
     ].join('\n');
   }
@@ -150,7 +131,6 @@ export class IntentParserService {
       data?: unknown;
       date?: unknown;
       slot?: unknown;
-      summary?: unknown;
     };
     try {
       obj = JSON.parse(cleaned) as typeof obj;
@@ -158,10 +138,9 @@ export class IntentParserService {
       this.logger.warn(
         `의도 파싱 실패: ${(err as Error).message}. raw=${raw.slice(0, 200)}`,
       );
-      return { intent: 'other', summary: '' };
+      return { intent: 'other' };
     }
 
-    const summary = typeof obj.summary === 'string' ? obj.summary : '';
     const data =
       typeof obj.data === 'object' && obj.data !== null
         ? (obj.data as Record<string, unknown>)
@@ -172,36 +151,33 @@ export class IntentParserService {
         return {
           intent: 'update_fridge',
           changes: toFridgeChanges(obj.changes),
-          summary,
         };
       case 'update_health':
-        return { intent: 'update_health', data, summary };
+        return { intent: 'update_health', data };
       case 'update_preference':
-        return { intent: 'update_preference', data, summary };
+        return { intent: 'update_preference', data };
       case 'update_schedule':
         return {
           intent: 'update_schedule',
           date: typeof obj.date === 'string' ? obj.date : '',
           data,
-          summary,
         };
       case 'update_situation':
-        return { intent: 'update_situation', data, summary };
+        return { intent: 'update_situation', data };
       case 'update_meal_log': {
         const slot = obj.slot;
         if (typeof slot !== 'string' || !VALID_SLOTS.has(slot as MealSlot)) {
-          return { intent: 'other', summary };
+          return { intent: 'other' };
         }
         return {
           intent: 'update_meal_log',
           date: typeof obj.date === 'string' ? obj.date : '',
           slot: slot as MealSlot,
           data,
-          summary,
         };
       }
       default:
-        return { intent: 'other', summary };
+        return { intent: 'other' };
     }
   }
 }

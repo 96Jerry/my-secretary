@@ -25,6 +25,7 @@ import { SituationService } from '@modules/situation/service/situation.service.j
 import { User } from '@modules/user/domain/user.entity.js';
 import { UserService } from '@modules/user/service/user.service.js';
 import { todayKstDate } from '../time/kst-date.js';
+import { previewDataChanges, previewFridgeChanges } from './change-preview.js';
 import {
   IntentContext,
   IntentParserService,
@@ -34,23 +35,23 @@ import {
 type Category = 'fridge' | 'health' | 'preference' | 'schedule';
 
 type PendingUpdate =
-  | { kind: 'fridge'; changes: FridgeChange[]; summary: string }
-  | { kind: 'health'; data: Record<string, unknown>; summary: string }
-  | { kind: 'preference'; data: Record<string, unknown>; summary: string }
-  | {
-      kind: 'schedule';
-      date: string;
-      data: Record<string, unknown>;
-      summary: string;
-    }
-  | { kind: 'situation'; data: Record<string, unknown>; summary: string }
+  | { kind: 'fridge'; changes: FridgeChange[] }
+  | { kind: 'health'; data: Record<string, unknown> }
+  | { kind: 'preference'; data: Record<string, unknown> }
+  | { kind: 'schedule'; date: string; data: Record<string, unknown> }
+  | { kind: 'situation'; data: Record<string, unknown> }
   | {
       kind: 'meal_log';
       date: string;
       slot: MealSlot;
       data: Record<string, unknown>;
-      summary: string;
     };
+
+// 확인 대기로 둘 변경과 사용자에게 보여줄 변경 내역. 적용할 게 없으면 pending은 null.
+interface PendingPreview {
+  pending: PendingUpdate | null;
+  lines: string[];
+}
 
 const CHANNEL_NAME = 'daily-meal-plan';
 
@@ -264,17 +265,80 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    const next = toPending(parsed);
+    const { pending: next, lines } = await this.previewPending(
+      user.id,
+      parsed,
+      ctx,
+    );
+    const changeList = lines.map((line) => `- ${line}`);
     if (!next) {
       const tail = await this.tailFor(user.id, false);
-      await msg.reply(`처리할 변경 내용이 없습니다.${tail}`);
+      await msg.reply(
+        [...changeList, `처리할 변경 내용이 없습니다.${tail}`].join('\n'),
+      );
       return;
     }
 
     this.pendingByGuild.set(guildId, next);
-    await msg.reply(
-      [askQuestion(next), next.summary || '(요약 없음)'].join('\n'),
-    );
+    await msg.reply([askQuestion(next), ...changeList].join('\n'));
+  }
+
+  // LLM 요약 대신 현재 저장된 상태와 비교한 실제 변경 내역을 만든다.
+  private async previewPending(
+    userId: string,
+    parsed: Exclude<ParsedIntent, { intent: 'other' }>,
+    ctx: IntentContext,
+  ): Promise<PendingPreview> {
+    switch (parsed.intent) {
+      case 'update_fridge': {
+        const { changes, lines } = previewFridgeChanges(
+          ctx.fridge,
+          parsed.changes,
+        );
+        return {
+          pending: changes.length === 0 ? null : { kind: 'fridge', changes },
+          lines,
+        };
+      }
+      case 'update_health':
+        return previewData({ kind: 'health', data: parsed.data }, ctx.health);
+      case 'update_preference':
+        return previewData(
+          { kind: 'preference', data: parsed.data },
+          ctx.preference,
+        );
+      case 'update_situation':
+        return previewData(
+          { kind: 'situation', data: parsed.data },
+          ctx.situation,
+        );
+      case 'update_schedule': {
+        if (!parsed.date) return { pending: null, lines: [] };
+        const before =
+          parsed.date === ctx.today
+            ? ctx.schedule
+            : ((await this.scheduleService.getForDate(userId, parsed.date))
+                ?.data ?? null);
+        return previewData(
+          { kind: 'schedule', date: parsed.date, data: parsed.data },
+          before,
+        );
+      }
+      case 'update_meal_log': {
+        if (!parsed.date) return { pending: null, lines: [] };
+        const logs = await this.mealLogService.getForDate(userId, parsed.date);
+        const before = logs.find((l) => l.slot === parsed.slot)?.data ?? null;
+        return previewData(
+          {
+            kind: 'meal_log',
+            date: parsed.date,
+            slot: parsed.slot,
+            data: parsed.data,
+          },
+          before,
+        );
+      }
+    }
   }
 
   private async applyPending(userId: string, p: PendingUpdate): Promise<void> {
@@ -366,44 +430,16 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 }
 
-function toPending(parsed: ParsedIntent): PendingUpdate | null {
-  switch (parsed.intent) {
-    case 'update_fridge':
-      return parsed.changes.length === 0
-        ? null
-        : { kind: 'fridge', changes: parsed.changes, summary: parsed.summary };
-    case 'update_health':
-      return Object.keys(parsed.data).length === 0
-        ? null
-        : { kind: 'health', data: parsed.data, summary: parsed.summary };
-    case 'update_preference':
-      return Object.keys(parsed.data).length === 0
-        ? null
-        : { kind: 'preference', data: parsed.data, summary: parsed.summary };
-    case 'update_schedule':
-      if (!parsed.date || Object.keys(parsed.data).length === 0) return null;
-      return {
-        kind: 'schedule',
-        date: parsed.date,
-        data: parsed.data,
-        summary: parsed.summary,
-      };
-    case 'update_situation':
-      return Object.keys(parsed.data).length === 0
-        ? null
-        : { kind: 'situation', data: parsed.data, summary: parsed.summary };
-    case 'update_meal_log':
-      if (!parsed.date || Object.keys(parsed.data).length === 0) return null;
-      return {
-        kind: 'meal_log',
-        date: parsed.date,
-        slot: parsed.slot,
-        data: parsed.data,
-        summary: parsed.summary,
-      };
-    case 'other':
-      return null;
+function previewData(
+  pending: Exclude<PendingUpdate, { kind: 'fridge' }>,
+  before: Record<string, unknown> | null,
+): PendingPreview {
+  // 빈 data로 덮어쓰면 기존 정보가 전부 지워지므로 적용하지 않는다.
+  if (Object.keys(pending.data).length === 0) {
+    return { pending: null, lines: [] };
   }
+  const lines = previewDataChanges(before, pending.data);
+  return { pending: lines.length === 0 ? null : pending, lines };
 }
 
 function askQuestion(p: PendingUpdate): string {
