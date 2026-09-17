@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { ClaudeService } from '@infra/claude/claude.service.js';
+import { FridgeItem } from '../../fridge/domain/fridge-item.entity.js';
 import { FridgeService } from '../../fridge/service/fridge.service.js';
 import { HealthService } from '../../health/service/health.service.js';
 import { MealLogService } from '../../meal-log/service/meal-log.service.js';
@@ -14,7 +15,8 @@ const RECENT_MEALS_DAYS = 7;
 export interface MealPlanContext {
   userId: string;
   date: string;
-  fridge: Record<string, unknown> | null;
+  // 유통기한 임박 순 정렬. 비어 있으면 재고 미입력.
+  fridge: FridgeItem[];
   health: Record<string, unknown> | null;
   preference: Record<string, unknown> | null;
   schedule: Record<string, unknown> | null;
@@ -53,7 +55,7 @@ export class MealPlanGeneratorService {
   ): Promise<MealPlanContext> {
     const [fridge, health, preference, schedule, situation, recentLogs] =
       await Promise.all([
-        this.fridgeService.getLatest(userId),
+        this.fridgeService.getItems(userId),
         this.healthService.getLatest(userId),
         this.preferenceService.getLatest(userId),
         this.scheduleService.getForDate(userId, date),
@@ -64,7 +66,7 @@ export class MealPlanGeneratorService {
     return {
       userId,
       date,
-      fridge: fridge?.data ?? null,
+      fridge,
       health: health?.data ?? null,
       preference: preference?.data ?? null,
       schedule: schedule?.data ?? null,
@@ -80,11 +82,11 @@ export class MealPlanGeneratorService {
 
 // 상황은 선택 입력이라 제외. Discord 온보딩의 필수 4개와 동일.
 function findMissingLabels(ctx: MealPlanContext): string[] {
-  const required: [string, Record<string, unknown> | null][] = [
-    ['냉장고', ctx.fridge],
-    ['건강', ctx.health],
-    ['선호', ctx.preference],
-    ['일정', ctx.schedule],
+  const required: [string, boolean][] = [
+    ['냉장고', ctx.fridge.length > 0],
+    ['건강', !!ctx.health],
+    ['선호', !!ctx.preference],
+    ['일정', !!ctx.schedule],
   ];
-  return required.filter(([, data]) => !data).map(([label]) => label);
+  return required.filter(([, filled]) => !filled).map(([label]) => label);
 }

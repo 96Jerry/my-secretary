@@ -14,6 +14,7 @@ import {
 } from 'discord.js';
 
 import { EnvironmentVariables } from '@config/index.js';
+import type { FridgeChange } from '@modules/fridge/domain/fridge-change.js';
 import { FridgeService } from '@modules/fridge/service/fridge.service.js';
 import { HealthService } from '@modules/health/service/health.service.js';
 import type { MealSlot } from '@modules/meal-log/domain/meal-log.entity.js';
@@ -25,7 +26,6 @@ import { User } from '@modules/user/domain/user.entity.js';
 import { UserService } from '@modules/user/service/user.service.js';
 import { todayKstDate } from '../time/kst-date.js';
 import {
-  FridgeItem,
   IntentContext,
   IntentParserService,
   ParsedIntent,
@@ -34,7 +34,7 @@ import {
 type Category = 'fridge' | 'health' | 'preference' | 'schedule';
 
 type PendingUpdate =
-  | { kind: 'fridge'; items: FridgeItem[]; summary: string }
+  | { kind: 'fridge'; changes: FridgeChange[]; summary: string }
   | { kind: 'health'; data: Record<string, unknown>; summary: string }
   | { kind: 'preference'; data: Record<string, unknown>; summary: string }
   | {
@@ -63,7 +63,7 @@ const ONBOARDING_DONE =
 
 const PROMPTS: Record<Category, string> = {
   fridge:
-    '냉장고에 있는 식재료를 알려주세요. 예: `닭가슴살 800g, 계란 10개, 양파 2개`',
+    '냉장고에 있는 식재료를 알려주세요. 유통기한도 같이 알려주시면 임박한 것부터 쓰는 식단을 짜드립니다. 예: `닭가슴살 800g 20일까지, 계란 10개, 양파 2개`',
   health:
     '건강 정보를 알려주세요 (목표, 나이, 키, 체중, 알레르기). 예: `30살 남성, 168cm 65kg, 근성장 목표, 키위 알레르기`',
   preference:
@@ -237,7 +237,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     const today = todayKstDate();
     const [fridge, health, preference, schedule, situation] = await Promise.all(
       [
-        this.fridgeService.getLatest(user.id),
+        this.fridgeService.getItems(user.id),
         this.healthService.getLatest(user.id),
         this.preferenceService.getLatest(user.id),
         this.scheduleService.getForDate(user.id, today),
@@ -247,7 +247,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
 
     const ctx: IntentContext = {
       today,
-      fridge: { items: readItems(fridge?.data) },
+      fridge,
       health: health?.data ?? null,
       preference: preference?.data ?? null,
       schedule: schedule?.data ?? null,
@@ -280,7 +280,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   private async applyPending(userId: string, p: PendingUpdate): Promise<void> {
     switch (p.kind) {
       case 'fridge':
-        await this.fridgeService.upsert(userId, { items: p.items });
+        await this.fridgeService.applyChanges(userId, p.changes);
         return;
       case 'health':
         await this.healthService.upsert(userId, p.data);
@@ -303,13 +303,13 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   private async findMissingCategories(userId: string): Promise<Category[]> {
     const today = todayKstDate();
     const [fridge, health, preference, schedule] = await Promise.all([
-      this.fridgeService.getLatest(userId),
+      this.fridgeService.getItems(userId),
       this.healthService.getLatest(userId),
       this.preferenceService.getLatest(userId),
       this.scheduleService.getForDate(userId, today),
     ]);
     const missing: Category[] = [];
-    if (!fridge) missing.push('fridge');
+    if (fridge.length === 0) missing.push('fridge');
     if (!health) missing.push('health');
     if (!preference) missing.push('preference');
     if (!schedule) missing.push('schedule');
@@ -369,9 +369,9 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
 function toPending(parsed: ParsedIntent): PendingUpdate | null {
   switch (parsed.intent) {
     case 'update_fridge':
-      return parsed.items.length === 0
+      return parsed.changes.length === 0
         ? null
-        : { kind: 'fridge', items: parsed.items, summary: parsed.summary };
+        : { kind: 'fridge', changes: parsed.changes, summary: parsed.summary };
     case 'update_health':
       return Object.keys(parsed.data).length === 0
         ? null
@@ -445,9 +445,4 @@ function findBotChannel(guild: Guild): TextChannel | undefined {
     (c): c is TextChannel =>
       c.type === ChannelType.GuildText && c.name === CHANNEL_NAME,
   );
-}
-
-function readItems(data: Record<string, unknown> | undefined): FridgeItem[] {
-  const items = data?.items;
-  return Array.isArray(items) ? (items as FridgeItem[]) : [];
 }

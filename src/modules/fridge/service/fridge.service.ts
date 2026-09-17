@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
-import { FridgeSnapshot } from '../domain/fridge.entity.js';
+import { FridgeChange } from '../domain/fridge-change.js';
+import { FridgeItem } from '../domain/fridge-item.entity.js';
 import {
   FRIDGE_REPOSITORY,
   type FridgeRepository,
@@ -13,14 +14,11 @@ export class FridgeService {
     private readonly fridgeRepository: FridgeRepository,
   ) {}
 
-  getLatest(userId: string): Promise<FridgeSnapshot | null> {
-    return this.fridgeRepository.findLatestByUserId(userId);
+  getItems(userId: string): Promise<FridgeItem[]> {
+    return this.fridgeRepository.findByUserId(userId);
   }
 
-  upsert(
-    userId: string,
-    data: Record<string, unknown>,
-  ): Promise<FridgeSnapshot> {
-    return this.fridgeRepository.upsert(userId, data);
+  applyChanges(userId: string, changes: FridgeChange[]): Promise<FridgeItem[]> {
+    return this.fridgeRepository.applyChanges(userId, changes);
   }
 }

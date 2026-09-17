@@ -1,4 +1,25 @@
+import { FridgeItem } from '../../../fridge/domain/fridge-item.entity.js';
 import { MealPlanContext } from '../../service/meal-plan-generator.service.js';
+
+// 한 줄에 하나씩. 예: `닭가슴살 800g (유통기한 2026-09-20, D-3)`
+function formatFridge(items: FridgeItem[], today: string): string {
+  if (items.length === 0) return '(입력된 재고 없음)';
+
+  return items
+    .map((i) => {
+      const amount = `${i.name} ${i.quantity}${i.unit}`;
+      if (!i.expiresAt) return `- ${amount}`;
+      const days = daysUntil(today, i.expiresAt);
+      const dday = days < 0 ? '기한 지남' : `D-${days}`;
+      return `- ${amount} (유통기한 ${i.expiresAt}, ${dday})`;
+    })
+    .join('\n');
+}
+
+function daysUntil(from: string, to: string): number {
+  const ms = Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`);
+  return Math.round(ms / 86400000);
+}
 
 export function buildGenerateMealPlanPrompt(ctx: MealPlanContext): string {
   return `${ctx.date}의 아침/점심/저녁 식단을 추천해줘.
@@ -19,7 +40,9 @@ export function buildGenerateMealPlanPrompt(ctx: MealPlanContext): string {
 </전제>
 
 <냉장고_재고>
-${JSON.stringify(ctx.fridge ?? {})}
+${formatFridge(ctx.fridge, ctx.date)}
+- 유통기한 임박 순으로 정렬됨. 임박한 재료를 먼저 소진하도록 구성.
+- 유통기한이 지난 재료는 사용 금지.
 </냉장고_재고>
 
 <상황>
