@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 
 import { MailService } from '@infra/mail/mail.service.js';
+import { todayKstDate } from '@infra/time/kst-date.js';
 import { UserService } from '../../user/service/user.service.js';
 import { MealPlan } from '../domain/meal-plan.entity.js';
 import {
@@ -42,7 +43,7 @@ export class MealPlanService {
         `User ${user.id} has no email; cannot send meal plan`,
       );
     }
-    const date = today();
+    const date = todayKstDate();
     const content = await this.generator.generate(user.id, date);
     const plan = await this.mealPlanRepository.save(user.id, date, content);
 
@@ -54,8 +55,4 @@ export class MealPlanService {
     this.logger.log(`Meal plan ${plan.id} sent to ${user.email}`);
     return plan;
   }
-}
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
 }

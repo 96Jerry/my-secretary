@@ -23,6 +23,7 @@ import { ScheduleService } from '@modules/schedule/service/schedule.service.js';
 import { SituationService } from '@modules/situation/service/situation.service.js';
 import { User } from '@modules/user/domain/user.entity.js';
 import { UserService } from '@modules/user/service/user.service.js';
+import { todayKstDate } from '../time/kst-date.js';
 import {
   FridgeItem,
   IntentContext,
@@ -240,7 +241,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
       this.pendingByGuild.delete(guildId);
     }
 
-    const today = todayIso();
+    const today = todayKstDate();
     const [fridge, health, preference, schedule, situation] = await Promise.all(
       [
         this.fridgeService.getLatest(user.id),
@@ -307,7 +308,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async findMissingCategories(userId: string): Promise<Category[]> {
-    const today = todayIso();
+    const today = todayKstDate();
     const [fridge, health, preference, schedule] = await Promise.all([
       this.fridgeService.getLatest(userId),
       this.healthService.getLatest(userId),
@@ -474,10 +475,6 @@ function confirmedMessage(p: PendingUpdate): string {
     case 'meal_log':
       return `식사 기록(${p.date} ${p.slot}) 저장 완료.`;
   }
-}
-
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
 }
 
 function findBotChannel(guild: Guild): TextChannel | undefined {

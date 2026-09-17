@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { MailService } from '@infra/mail/mail.service.js';
+import { todayKstDate } from '@infra/time/kst-date.js';
 import { UserService } from '../../user/service/user.service.js';
 import {
   MOTIVATION_MESSAGE_REPOSITORY,
@@ -110,16 +111,6 @@ export class MotivationService {
     this.logger.log(`사용자 ${profile.userId}: ${sentDate} 발송 완료`);
     return 'sent';
   }
-}
-
-// Asia/Seoul 기준 YYYY-MM-DD. en-CA 로케일은 항상 ISO 형식 출력.
-function todayKstDate(): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
 }
 
 // LLM 결과(plain text)를 단순 <p> 래핑으로 HTML 메일 본문으로 변환.
