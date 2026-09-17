@@ -34,7 +34,7 @@ export function previewFridgeChanges(
       const after: Stock = {
         quantity: change.quantity,
         unit: change.unit,
-        expiresAt: change.expiresAt,
+        expiresAt: change.expiresAt ?? before?.expiresAt ?? null,
       };
       stock.set(change.name, after);
       applied.push(change);

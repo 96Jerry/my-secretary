@@ -44,7 +44,7 @@ export class FridgeTypeormRepository implements FridgeRepository {
           name: change.name,
           quantity: change.quantity,
           unit: change.unit,
-          expiresAt: change.expiresAt,
+          expiresAt: change.expiresAt ?? existing?.expiresAt ?? null,
         });
         continue;
       }
