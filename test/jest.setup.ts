@@ -22,8 +22,6 @@ const DUMMY_ENV: Record<string, string> = {
   CGV_IMAX_MOVIES: '테스트:30000000',
   DISCORD_BOT_TOKEN: 'test',
   DISCORD_ERROR_WEBHOOK_URL: 'https://example.com/webhook',
-  OBSERVE_APP_KEY: 'test',
-  OBSERVE_APP_SECRET: 'test',
 };
 
 for (const [key, value] of Object.entries(DUMMY_ENV)) {

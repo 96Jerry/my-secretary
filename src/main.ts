@@ -1,14 +1,13 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
-import { AppModule, ObserveInstrument } from './app.module.js';
+import { AppModule } from './app.module.js';
 import { env } from './config/index.js';
 import { DiscordWebhookLogger } from './infrastructure/logging/discord-webhook.logger.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bufferLogs: true,
-    instrument: ObserveInstrument,
   });
   app.useLogger(app.get(DiscordWebhookLogger));
 

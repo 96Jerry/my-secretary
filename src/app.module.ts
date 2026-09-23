@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import { env, EnvModule } from './config/index.js';
+import { EnvModule } from './config/index.js';
 import { ClaudeModule } from './infrastructure/claude/claude.module.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { DiscordModule } from './infrastructure/discord/discord.module.js';
@@ -20,9 +20,6 @@ import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
 import { SituationModule } from './modules/situation/situation.module.js';
 import { UserModule } from './modules/user/user.module.js';
 import { ProfilerModule } from '@infra/profiler/profiler.module.js';
-import { createObserveModule } from '@nestjs/observe';
-
-export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
 @Module({
   imports: [
@@ -46,11 +43,6 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     CgvImaxModule,
     SchedulerModule,
     ProfilerModule,
-    ObserveModule.forRoot({
-      appKey: env.OBSERVE_APP_KEY,
-      appSecret: env.OBSERVE_APP_SECRET,
-      serviceId: 'my-secretary-service',
-    }),
   ],
 })
 export class AppModule {}

@@ -145,13 +145,6 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CGV_IMAX_CRON: string = '*/10 * * * *';
-
-  // NestJS Observe 자격 증명
-  @IsString()
-  OBSERVE_APP_KEY!: string;
-
-  @IsString()
-  OBSERVE_APP_SECRET!: string;
 }
 
 export function validateEnv(
