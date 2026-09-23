@@ -7,7 +7,6 @@ const DUMMY_ENV: Record<string, string> = {
   DB_USERNAME: 'test',
   DB_PASSWORD: 'test',
   DB_NAME: 'test',
-  DB_SSL: 'false',
   CLAUDE_CODE_OAUTH_TOKEN: 'test',
   CLAUDE_CODE_PATH: 'test',
   CLAUDE_MODEL: 'test',
