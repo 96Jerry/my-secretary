@@ -39,7 +39,7 @@ function row(overrides: RowOverrides = {}): Record<string, string> {
     siteNm: 'CGV 용산아이파크몰',
     scnsNo: '018',
     scnsNm: 'IMAX관',
-    scnYmd: '20260917',
+    scnYmd: '20991101',
     scnsrtTm: '0730',
     scnendTm: '1032',
     tcscnsGradCd: '03', // 아이맥스
@@ -157,8 +157,8 @@ describe('CgvImaxService', () => {
 
   describe('초기 동기화', () => {
     it('첫 한 바퀴는 알림 없이 회차만 저장한다', async () => {
-      cgv.dates = ['20260917'];
-      cgv.rowsByDate.set('20260917', [row(), row({ scnsrtTm: '1100' })]);
+      cgv.dates = ['20991101'];
+      cgv.rowsByDate.set('20991101', [row(), row({ scnsrtTm: '1100' })]);
 
       await runCycles(1);
 
@@ -168,11 +168,11 @@ describe('CgvImaxService', () => {
     });
 
     it('초기 동기화가 끝난 뒤에 생긴 회차만 발송한다', async () => {
-      cgv.dates = ['20260917'];
-      cgv.rowsByDate.set('20260917', [row()]);
+      cgv.dates = ['20991101'];
+      cgv.rowsByDate.set('20991101', [row()]);
       await runCycles(1); // 초기 동기화
 
-      cgv.rowsByDate.set('20260917', [row(), row({ scnsrtTm: '1800' })]);
+      cgv.rowsByDate.set('20991101', [row(), row({ scnsrtTm: '1800' })]);
       await runCycles(1);
 
       expect(mails).toHaveLength(1);
@@ -186,8 +186,8 @@ describe('CgvImaxService', () => {
     // scnsNo는 극장 안에서만 유일하므로, 극장번호가 키에 없으면 상영관·시각이
     // 겹치는 두 회차가 같은 키가 되어 한쪽이 영영 알림에서 누락된다.
     it('다른 극장의 회차를 걸러내고 키가 충돌하지 않는다', async () => {
-      cgv.dates = ['20260917'];
-      cgv.rowsByDate.set('20260917', [
+      cgv.dates = ['20991101'];
+      cgv.rowsByDate.set('20991101', [
         row(),
         row({ siteNo: 'P013', siteNm: '씨네드쉐프 용산' }), // 상영관·시각 동일
       ]);
@@ -195,7 +195,7 @@ describe('CgvImaxService', () => {
       await runCycles(1);
 
       expect(repo.keys.size).toBe(1);
-      expect([...repo.keys]).toEqual([`0013:20260917:018:0730:${MOV_NO}`]);
+      expect([...repo.keys]).toEqual([`0013:20991101:018:0730:${MOV_NO}`]);
     });
 
     it.todo('IMAX가 아닌 회차(tcscnsGradCd !== 03)는 무시한다');
