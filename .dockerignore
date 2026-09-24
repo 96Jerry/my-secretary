@@ -13,3 +13,4 @@ logs
 .DS_Store
 Dockerfile
 docker-compose.yaml
+docker-compose.override.yaml

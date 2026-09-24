@@ -1,0 +1,19 @@
+# my-secretary 배포용 GitHub Actions self-hosted runner
+# 맥미니의 ~/deploy/runner/ 에 이 파일과 .env를 두고 docker compose up -d 로 띄운다
+services:
+  runner:
+    image: myoung34/github-runner:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      RUNNER_SCOPE: repo
+      REPO_URL: https://github.com/96Jerry/my-secretary
+      RUNNER_NAME: mac-mini
+      # 기본 라벨(self-hosted, Linux, ARM64)에 더해 이 앱 전용 라벨을 붙인다
+      LABELS: my-secretary
+    volumes:
+      # 호스트 도커를 그대로 쓴다. 이 컨테이너는 도커 전체 권한을 가지므로
+      # 워크플로는 push 트리거만 쓰고 fork PR이 닿지 않게 유지할 것
+      - /var/run/docker.sock:/var/run/docker.sock
+      # 앱 배포 경로를 호스트와 같은 경로로 마운트해야 compose가 같은 프로젝트로 인식한다
+      - /Users/paradise/deploy/my-secretary:/Users/paradise/deploy/my-secretary

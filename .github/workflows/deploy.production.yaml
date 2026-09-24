@@ -1,4 +1,4 @@
-name: Deploy to Lightsail
+name: Deploy to Mac mini
 
 on:
   push:
@@ -9,11 +9,12 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    environment: production
+env:
+  IMAGE: ghcr.io/96jerry/my-secretary
 
+jobs:
+  test:
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: 소스 체크아웃
         uses: actions/checkout@v4
@@ -24,50 +25,65 @@ jobs:
       - name: Node.js 설정
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: 의존성 설치
         run: pnpm install --frozen-lockfile
 
-      - name: 빌드
-        run: pnpm run build
+      # 환경변수는 test/jest.setup.ts가 더미 값으로 채운다
+      - name: 테스트
+        run: pnpm test
 
-      - name: 운영 의존성만 남기도록 재설치
-        run: pnpm install --prod --frozen-lockfile
+  build:
+    needs: test
+    # 맥미니(애플 실리콘)와 같은 arm64에서 빌드해 에뮬레이션 없이 이미지를 만든다
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
 
-      - name: 배포 아티팩트 압축
+      - name: Buildx 설정
+        uses: docker/setup-buildx-action@v3
+
+      - name: GHCR 로그인
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # latest는 배포용, 커밋 해시 태그는 롤백용
+      - name: 이미지 빌드 및 푸시
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build
+    # 맥미니 도커 위의 러너 컨테이너(deploy/runner). 공개 저장소라 push 이벤트에서만 실행되도록 트리거를 유지할 것
+    runs-on: [self-hosted, Linux, ARM64, my-secretary]
+    permissions:
+      packages: read
+    steps:
+      # 러너 컨테이너는 호스트의 docker login 정보를 못 쓰므로 실행마다 발급되는 토큰으로 로그인
+      - name: GHCR 로그인
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # 체크아웃 없이 맥미니의 고정 경로(compose 파일 + .env)에서 실행
+      - name: 새 이미지로 교체
+        working-directory: /Users/paradise/deploy/my-secretary
         run: |
-          tar -czf deploy.tar.gz \
-            dist \
-            node_modules \
-            package.json \
-            pnpm-lock.yaml \
-            ecosystem.config.json
-
-      - name: Lightsail로 아티팩트 전송
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          source: deploy.tar.gz
-          target: ~/app
-
-      - name: Lightsail에서 배포 실행
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.LIGHTSAIL_HOST }}
-          username: ${{ secrets.LIGHTSAIL_USER }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          script: |
-            set -e
-            cd ~/app
-
-            # 압축 해제 (node_modules 포함)
-            tar -xzf deploy.tar.gz
-            rm deploy.tar.gz
-
-            # PM2로 무중단 재시작 (없으면 새로 시작)
-            pm2 startOrReload ecosystem.config.json --update-env --wait-ready --listen-timeout 20000
-            pm2 save
+          docker compose pull app
+          docker compose up -d
+          docker image prune -f

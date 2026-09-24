@@ -1,0 +1,18 @@
+# 개발용 덮어쓰기. docker compose가 같은 폴더에 있으면 자동으로 합쳐 읽는다
+# 맥미니 배포 경로에는 복사하지 않으므로 운영에는 적용되지 않는다
+name: my-secretary-dev
+
+services:
+  app:
+    # 운영이 받아 둔 GHCR 이미지를 쓰지 않고 로컬에서 빌드한 이미지를 쓴다
+    image: my-secretary:dev
+    ports: !override
+      - "3000:3000"
+    environment:
+      # .env의 DB_HOST=localhost는 pnpm start:dev용. 컨테이너 안에서는 서비스 이름으로 접속
+      DB_HOST: db
+
+  db:
+    # pnpm start:dev에서 접속할 수 있도록 개발 DB만 포트를 연다
+    ports: !override
+      - "5432:5432"
