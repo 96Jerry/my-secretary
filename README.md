@@ -216,12 +216,10 @@ pnpm install
 cp .env.example .env
 # DB 자격 증명, CLAUDE_CODE_OAUTH_TOKEN, SMTP 설정, MEAL_PLAN_RECIPIENT,
 # DISCORD_BOT_TOKEN 등을 채운다
+# 개발용은 DB_HOST=localhost, CRON_ENABLED=false, 개발용 봇 토큰, 수신자 +dev 주소로 둔다 (아래 배포 섹션 참고)
 
-# 3. Postgres 실행 (원하는 방식으로; Docker 예시)
-docker run -d --name my-secretary-pg \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=my_secretary \
-  -p 5432:5432 postgres:16
+# 3. 개발 DB 실행 (docker-compose.override.yaml이 개발용 이름·포트로 덮어쓴다)
+docker compose up -d db
 
 # 4. 마이그레이션 생성 + 실행 (현재는 sync: true)
 pnpm migration:generate src/infrastructure/database/migrations/Init
@@ -262,12 +260,80 @@ pnpm start:dev
 
 ## 배포
 
-main에 push하면 `.github/workflows/deploy.production.yaml`이 테스트 → arm64 이미지 빌드 → GHCR(`ghcr.io/96jerry/my-secretary`, 공개) 푸시 → 맥미니 self-hosted runner에서 `docker compose pull && up -d` 순으로 실행한다.
+개발 기기(이 맥)가 운영 서버를 겸한다. `main`에 push하면 GitHub에서 테스트·이미지 빌드를 하고, 맥의 도커 위에서 도는 self-hosted runner가 새 이미지로 운영 컨테이너를 교체한다. 맥으로 들어오는 포트는 없다(러너가 GitHub로 나가는 연결만 쓴다).
 
-- 러너는 맥미니 도커 위의 컨테이너로 돈다. 최초 1회 `deploy/runner/`에서 `RUNNER_TOKEN=<등록 토큰> docker compose up -d`로 등록하고, 등록 정보는 볼륨에 남아 이후 토큰 없이 재시작된다. 도커가 뜨면 러너도 같이 뜬다.
-- 맥미니 배포 경로 `~/deploy/my-secretary/`에는 `docker-compose.yaml`과 `.env`만 둔다. 배포 작업은 체크아웃하지 않으므로 **compose 파일을 바꾸면 이 경로에 직접 복사**해야 한다.
-- 개발 기기와 운영 서버가 같으므로 `docker-compose.override.yaml`(개발 폴더에만 존재)이 개발용 프로젝트 이름과 포트를 덮어쓴다. 운영: 앱 3100, DB 5433 / 개발: 앱 3000, DB 5432. 개발 `.env`는 개발용 디스코드 봇 토큰을 쓴다.
-- 롤백: 배포 경로에서 `IMAGE_TAG=<커밋 해시> docker compose up -d`. latest로 돌아갈 때는 `docker compose up -d`.
+```
+┌──────────────── GitHub ────────────────┐
+│ main에 push                             │
+│  ├─ test   (GitHub VM, arm64)  pnpm test │
+│  ├─ build  (GitHub VM, arm64)  이미지 빌드 → GHCR 푸시
+│  │    ghcr.io/96jerry/my-secretary:latest / :<커밋 해시>
+│  └─ deploy ─────────┐                   │
+└─────────────────────┼───────────────────┘
+          러너가 job을 받아감 (맥 → GitHub 방향 연결만)
+┌──────────────── 이 맥 (Docker Desktop) ──────────────────────┐
+│ [러너] runner-runner-1        ← ~/dev/my-secretary/deploy/runner │
+│        도커 소켓으로 호스트 도커를 조작                          │
+│ [운영] 프로젝트 my-secretary     ← ~/deploy/my-secretary        │
+│        app 127.0.0.1:3100 / db 127.0.0.1:5433 (볼륨 my-secretary_pgdata)
+│ [개발] 프로젝트 my-secretary-dev ← ~/dev/my-secretary           │
+│        db 5432 (볼륨 my-secretary-dev_pgdata)                  │
+│        앱은 도커 밖에서 pnpm start:dev (3000)                   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 배포 흐름 (`.github/workflows/deploy.production.yaml`)
+
+1. **test** — GitHub의 arm64 VM에서 `pnpm test`. 실패하면 이후 단계는 실행되지 않는다.
+2. **build** — 같은 VM에서 이미지를 빌드해 GHCR에 `latest`(배포용)와 커밋 해시(롤백용) 태그로 푸시한다. 이미지는 공개다. CI가 GitHub 소스로 빌드하므로 `.env`가 들어갈 수 없다.
+3. **deploy** — 맥의 러너가 `~/deploy/my-secretary`에서 `docker compose pull app && docker compose up -d && docker image prune -f`를 실행한다. 토큰 권한은 없다(`permissions: {}`).
+
+### 운영과 개발의 분리
+
+같은 맥과 같은 도커를 쓰지만 폴더, compose 프로젝트 이름, 포트, `.env`, 디스코드 봇이 모두 다르다.
+
+| | 운영 | 개발 |
+| --- | --- | --- |
+| 위치 | `~/deploy/my-secretary` | `~/dev/my-secretary` (git 저장소) |
+| 폴더 구성 | `docker-compose.yaml` + `.env`만 | 소스 전체 + `docker-compose.override.yaml` |
+| compose 프로젝트 이름 | `my-secretary` | `my-secretary-dev` |
+| 앱 실행 | GHCR 이미지 컨테이너 | `pnpm start:dev` (도커 밖) |
+| 앱 포트 | 127.0.0.1:3100 | 3000 |
+| DB 포트 / 볼륨 | 127.0.0.1:5433 / `my-secretary_pgdata` | 5432 / `my-secretary-dev_pgdata` |
+| `DB_HOST` | `db` | `localhost` |
+| 디스코드 봇 | 운영 봇 | 개발 봇 |
+| 메일 수신자 | 원래 주소 | `아이디+dev@gmail.com` |
+| cron | 켜짐 (`CRON_ENABLED` 기본값 `true`) | 꺼짐 (`CRON_ENABLED=false`) |
+
+- `docker-compose.override.yaml`은 개발 폴더에만 있다. compose가 같은 폴더에 있으면 자동으로 합쳐 읽으므로 개발에서는 이름·포트가 바뀌고, 운영 폴더에는 이 파일이 없어 기본 설정대로 돈다.
+- `.env`는 폴더마다 따로 있다. 운영 `.env`는 배포로 덮어써지지 않는다.
+- 운영 포트는 `127.0.0.1`에만 열어 맥 밖에서는 접근할 수 없다.
+- 개발에서 cron을 끄는 이유: 켜 두면 운영과 중복 실행되어 메일·Claude 호출이 두 번 나가고, 특히 CGV 조회가 두 배가 되어 같은 IP가 차단되면 운영까지 막힌다.
+
+### 러너 (`deploy/runner/`)
+
+- GitHub 공식 러너를 담은 컨테이너(`myoung34/github-runner`)다. 호스트의 도커 소켓과 운영 폴더(같은 경로)를 마운트한다. 경로를 호스트와 똑같이 맞춰야 compose가 같은 프로젝트로 인식하고, 볼륨 경로도 호스트 기준으로 올바르게 해석된다.
+- 최초 1회 등록: 저장소 Settings → Actions → Runners → New self-hosted runner 화면의 `--token` 값을 받아 1시간 안에 실행한다.
+  ```bash
+  cd deploy/runner
+  RUNNER_TOKEN=<등록 토큰> docker compose up -d
+  ```
+  등록 정보는 `runner-data` 볼륨에 남아 이후에는 토큰 없이 재시작된다. GitHub에서 러너를 지웠거나 `docker compose down -v`로 볼륨을 지웠다면 새 토큰으로 다시 등록한다.
+- 러너는 도커 전체 권한을 가진다. 워크플로는 `push` 트리거만 쓰고 `pull_request` 트리거를 추가하지 않는다(공개 저장소라 fork PR이 러너에서 코드를 실행할 수 있게 된다).
+
+### 재부팅
+
+맥 부팅 → 자동 로그인 → Docker Desktop 자동 시작 → `restart: unless-stopped`인 운영 app/db와 러너가 스스로 뜬다.
+
+### 자주 쓰는 명령
+
+| 할 일 | 방법 |
+| --- | --- |
+| 배포 | `main`에 push |
+| 롤백 | `~/deploy/my-secretary`에서 `IMAGE_TAG=<커밋 해시> docker compose up -d`, 최신으로 복귀는 `docker compose up -d` |
+| 운영 `.env` 수정 | `~/deploy/my-secretary/.env` 수정 후 그 폴더에서 `docker compose up -d` (push로는 반영되지 않음) |
+| 운영 compose 수정 | 저장소의 `docker-compose.yaml`을 고친 뒤 `~/deploy/my-secretary`에 직접 복사 (deploy는 체크아웃하지 않음) |
+| 개발 | `~/dev/my-secretary`에서 `docker compose up -d db` 후 `pnpm start:dev` |
 
 ## 메모
 
