@@ -262,9 +262,9 @@ pnpm start:dev
 
 ## 배포
 
-main에 push하면 `.github/workflows/deploy.production.yaml`이 테스트 → arm64 이미지 빌드 → GHCR(`ghcr.io/96jerry/my-secretary`, 비공개) 푸시 → 맥미니 self-hosted runner에서 `docker compose pull && up -d` 순으로 실행한다.
+main에 push하면 `.github/workflows/deploy.production.yaml`이 테스트 → arm64 이미지 빌드 → GHCR(`ghcr.io/96jerry/my-secretary`, 공개) 푸시 → 맥미니 self-hosted runner에서 `docker compose pull && up -d` 순으로 실행한다.
 
-- 러너는 맥미니 도커 위의 컨테이너로 돈다. `deploy/runner/`의 compose 파일과 `.env`(`.env.example` 참고)를 맥미니 `~/deploy/runner/`에 두고 `docker compose up -d`. 도커가 뜨면 러너도 같이 뜬다.
+- 러너는 맥미니 도커 위의 컨테이너로 돈다. 최초 1회 `deploy/runner/`에서 `RUNNER_TOKEN=<등록 토큰> docker compose up -d`로 등록하고, 등록 정보는 볼륨에 남아 이후 토큰 없이 재시작된다. 도커가 뜨면 러너도 같이 뜬다.
 - 맥미니 배포 경로 `~/deploy/my-secretary/`에는 `docker-compose.yaml`과 `.env`만 둔다. 배포 작업은 체크아웃하지 않으므로 **compose 파일을 바꾸면 이 경로에 직접 복사**해야 한다.
 - 개발 기기와 운영 서버가 같으므로 `docker-compose.override.yaml`(개발 폴더에만 존재)이 개발용 프로젝트 이름과 포트를 덮어쓴다. 운영: 앱 3100, DB 5433 / 개발: 앱 3000, DB 5432. 개발 `.env`는 개발용 디스코드 봇 토큰을 쓴다.
 - 롤백: 배포 경로에서 `IMAGE_TAG=<커밋 해시> docker compose up -d`. latest로 돌아갈 때는 `docker compose up -d`.

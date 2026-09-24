@@ -73,13 +73,9 @@ jobs:
     needs: build
     # 맥미니 도커 위의 러너 컨테이너(deploy/runner). 공개 저장소라 push 이벤트에서만 실행되도록 트리거를 유지할 것
     runs-on: [self-hosted, Linux, ARM64, my-secretary]
-    permissions:
-      packages: read
+    # 공개 이미지라 로그인 없이 pull하므로 토큰 권한이 필요 없다
+    permissions: {}
     steps:
-      # 러너 컨테이너는 호스트의 docker login 정보를 못 쓰므로 실행마다 발급되는 토큰으로 로그인
-      - name: GHCR 로그인
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
       # 체크아웃 없이 맥미니의 고정 경로(compose 파일 + .env)에서 실행
       - name: 새 이미지로 교체
         working-directory: /Users/paradise/deploy/my-secretary
