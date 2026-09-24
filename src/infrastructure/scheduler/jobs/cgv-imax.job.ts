@@ -21,6 +21,7 @@ export class CgvImaxJob {
   @Cron(env.CGV_IMAX_CRON, {
     name: 'cgv-imax',
     timeZone: 'Asia/Seoul',
+    disabled: !env.CRON_ENABLED,
   })
   async run(): Promise<void> {
     // 크론이 실제로 발화했다는 사실 자체를 남긴다. 이 줄이 없으면 스케줄러가

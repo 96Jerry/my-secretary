@@ -102,6 +102,12 @@ export class EnvironmentVariables {
   @IsEmail()
   MEAL_PLAN_RECIPIENT!: string;
 
+  // 개발 기기가 운영 서버를 겸하므로, 개발 환경에서 cron이 운영과 중복 실행되지 않게 끈다
+  @Transform(toBoolean)
+  @IsBoolean()
+  @IsOptional()
+  CRON_ENABLED: boolean = true;
+
   @IsString()
   @IsOptional()
   MEAL_PLAN_CRON: string = '0 6 * * *';

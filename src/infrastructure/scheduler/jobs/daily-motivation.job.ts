@@ -17,6 +17,7 @@ export class DailyMotivationJob {
   @Cron(env.MOTIVATION_CRON, {
     name: 'daily-motivation',
     timeZone: 'Asia/Seoul',
+    disabled: !env.CRON_ENABLED,
   })
   async run(): Promise<void> {
     await this.resourceProfiler.profile(env.MOTIVATION_CRON, 3000, () =>

@@ -13,6 +13,7 @@ export class PalworldNewsJob {
   @Cron(env.PALWORLD_NEWS_CRON, {
     name: 'palworld-news',
     timeZone: 'Asia/Seoul',
+    disabled: !env.CRON_ENABLED,
   })
   async run(): Promise<void> {
     await this.doWork();

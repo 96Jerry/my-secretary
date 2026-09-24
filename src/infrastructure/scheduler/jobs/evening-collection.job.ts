@@ -19,6 +19,7 @@ export class EveningCollectionJob {
   @Cron(env.EVENING_COLLECTION_CRON, {
     name: 'evening-collection',
     timeZone: 'Asia/Seoul',
+    disabled: !env.CRON_ENABLED,
   })
   async run(): Promise<void> {
     await this.resourceProfiler.profile(env.EVENING_COLLECTION_CRON, 3000, () =>

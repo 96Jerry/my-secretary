@@ -15,7 +15,11 @@ export class DailyMealPlanJob {
     private readonly resourceProfiler: ResourceProfilerService,
   ) {}
 
-  @Cron(env.MEAL_PLAN_CRON, { name: 'daily-meal-plan', timeZone: 'Asia/Seoul' })
+  @Cron(env.MEAL_PLAN_CRON, {
+    name: 'daily-meal-plan',
+    timeZone: 'Asia/Seoul',
+    disabled: !env.CRON_ENABLED,
+  })
   async run(): Promise<void> {
     await this.resourceProfiler.profile(env.MEAL_PLAN_CRON, 3000, () =>
       this.doWork(),
