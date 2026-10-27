@@ -44,8 +44,7 @@ export class MealPlanService {
       );
     }
     const date = todayKstDate();
-    const generated = await this.generator.generate(user.id, date);
-    const content = missingNotice(generated.missingLabels) + generated.content;
+    const { content } = await this.generator.generate(user.id, date);
     const plan = await this.mealPlanRepository.save(user.id, date, content);
 
     await this.mailService.send({
@@ -56,9 +55,4 @@ export class MealPlanService {
     this.logger.log(`Meal plan ${plan.id} sent to ${user.email}`);
     return plan;
   }
-}
-
-function missingNotice(labels: string[]): string {
-  if (labels.length === 0) return '';
-  return `<p><strong>안내:</strong> ${labels.join(', ')} 정보 없이 만든 식단입니다. Discord #daily-meal-plan 채널에 입력해 주세요.</p>`;
 }
