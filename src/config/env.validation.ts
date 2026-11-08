@@ -146,6 +146,11 @@ export class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CGV_IMAX_CRON: string = '*/10 * * * *';
+
+  // 네이버 웹툰 찜 순위 수집. CGV 폴링(매 10분 + 최대 90초 지터)과 겹치지 않는 분에 둔다
+  @IsString()
+  @IsOptional()
+  WEBTOON_RANKING_CRON: string = '5 4 * * *';
 }
 
 export function validateEnv(

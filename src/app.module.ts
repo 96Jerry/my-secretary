@@ -19,6 +19,7 @@ import { PreferenceModule } from './modules/preference/preference.module.js';
 import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
 import { SituationModule } from './modules/situation/situation.module.js';
 import { UserModule } from './modules/user/user.module.js';
+import { WebtoonRankingModule } from './modules/webtoon-ranking/webtoon-ranking.module.js';
 import { ProfilerModule } from '@infra/profiler/profiler.module.js';
 
 @Module({
@@ -41,6 +42,7 @@ import { ProfilerModule } from '@infra/profiler/profiler.module.js';
     MotivationModule,
     PalworldNewsModule,
     CgvImaxModule,
+    WebtoonRankingModule,
     SchedulerModule,
     ProfilerModule,
   ],
