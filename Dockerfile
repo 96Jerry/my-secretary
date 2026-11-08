@@ -22,6 +22,8 @@ ENV NODE_ENV=production
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+# 정적 페이지. nest build는 .ts만 dist로 옮기므로 따로 복사한다
+COPY --from=build /app/public ./public
 
 # root 대신 이미지에 기본 포함된 node 유저로 실행
 USER node

@@ -1,5 +1,10 @@
+import { join } from 'node:path';
+
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ServeStaticModule } from '@nestjs/serve-static';
+
+import { AppController } from './app.controller.js';
 
 import { EnvModule } from './config/index.js';
 import { ClaudeModule } from './infrastructure/claude/claude.module.js';
@@ -27,6 +32,12 @@ import { ProfilerModule } from '@infra/profiler/profiler.module.js';
     EnvModule,
     LoggingModule,
     ScheduleModule.forRoot(),
+    // 테일넷에서 브라우저로 보는 개인 페이지. dist가 아니라 저장소 루트의 public/을 쓴다.
+    // renderPath를 '/'로 좁혀야 없는 API 경로가 index.html 대신 404를 돌려준다.
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'public'),
+      renderPath: '/',
+    }),
     DatabaseModule,
     ClaudeModule,
     MailModule,
@@ -46,5 +57,6 @@ import { ProfilerModule } from '@infra/profiler/profiler.module.js';
     SchedulerModule,
     ProfilerModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
