@@ -35,9 +35,7 @@ const GENRE_CODE_TO_NAME: Readonly<Record<string, string>> = {
 
 const UNKNOWN_GENRE = { code: 'ETC', name: '기타' } as const;
 
-export interface NaverWebtoon {
-  titleId: number;
-  titleName: string;
+export interface NaverWebtoon extends TitleInfo {
   favoriteCount: number;
   genreCode: string;
   genreName: string;
@@ -49,9 +47,26 @@ export interface NaverWebtoonCrawlResult {
   failed: number;
 }
 
-interface TitleInfo {
+// 목록 API에서 바로 얻는 값. 상세 조회 없이 받으므로 요청 수가 늘지 않는다.
+export interface TitleInfo {
   titleId: number;
   titleName: string;
+  author: string | null;
+  thumbnailUrl: string | null;
+  starScore: number | null;
+  isRest: boolean;
+  isNew: boolean;
+}
+
+// 목록 API 응답 중 쓰는 필드만 추렸다
+interface TitleListItem {
+  titleId: number;
+  titleName: string;
+  author?: string;
+  thumbnailUrl?: string;
+  starScore?: unknown;
+  rest?: boolean;
+  new?: boolean;
 }
 
 // 상세 API 응답 중 쓰는 필드만 추렸다
@@ -80,13 +95,22 @@ export class NaverWebtoonService {
   // 요일별 목록에는 여러 요일에 연재되는 작품이 중복으로 들어 있다
   private async fetchTitleList(): Promise<TitleInfo[]> {
     const data = (await this.fetchJson(TITLE_LIST_URL)) as {
-      titleListMap?: Record<string, TitleInfo[] | undefined>;
+      titleListMap?: Record<string, TitleListItem[] | undefined>;
     };
 
     const unique = new Map<number, TitleInfo>();
     for (const list of Object.values(data.titleListMap ?? {})) {
-      for (const { titleId, titleName } of list ?? []) {
-        if (!unique.has(titleId)) unique.set(titleId, { titleId, titleName });
+      for (const t of list ?? []) {
+        if (unique.has(t.titleId)) continue;
+        unique.set(t.titleId, {
+          titleId: t.titleId,
+          titleName: t.titleName,
+          author: t.author || null,
+          thumbnailUrl: t.thumbnailUrl || null,
+          starScore: typeof t.starScore === 'number' ? t.starScore : null,
+          isRest: t.rest === true,
+          isNew: t.new === true,
+        });
       }
     }
     return [...unique.values()];

@@ -25,7 +25,10 @@ function json(body: unknown, status = 200): Response {
  * 재시도 시나리오(첫 응답 429 → 다음 응답 200)를 표현할 수 있다.
  */
 class FakeNaver {
-  titleListMap: Record<string, { titleId: number; titleName: string }[]> = {};
+  titleListMap: Record<
+    string,
+    { titleId: number; titleName: string; [key: string]: unknown }[]
+  > = {};
   readonly details = new Map<number, Response[]>();
   readonly calls = new Map<number, number>();
 
@@ -128,6 +131,34 @@ describe('NaverWebtoonService', () => {
     expect(result.failed).toBe(2);
     // 404는 재시도해도 같으므로 한 번만 부른다
     expect(naver.calls.get(3)).toBe(1);
+  });
+
+  it('별점·휴재·신작·작가·썸네일은 목록 API 값을 그대로 쓴다', async () => {
+    naver.titleListMap = {
+      MONDAY: [
+        {
+          titleId: 1,
+          titleName: '전부 있음',
+          author: '작가',
+          thumbnailUrl: 'https://img/1.jpg',
+          starScore: 9.9,
+          rest: true,
+          new: true,
+        },
+        { titleId: 2, titleName: '전부 없음' },
+      ],
+    };
+    naver.details.set(1, [json({ favoriteCount: 1 })]);
+    naver.details.set(2, [json({ favoriteCount: 2 })]);
+
+    const { items } = await service.fetchAllFavorites();
+    const pick = (id: number) => {
+      const w = items.find((i) => i.titleId === id)!;
+      return [w.author, w.thumbnailUrl, w.starScore, w.isRest, w.isNew];
+    };
+
+    expect(pick(1)).toEqual(['작가', 'https://img/1.jpg', 9.9, true, true]);
+    expect(pick(2)).toEqual([null, null, null, false, false]);
   });
 
   it('429는 재시도해서 성공하면 정상 수집한다', async () => {

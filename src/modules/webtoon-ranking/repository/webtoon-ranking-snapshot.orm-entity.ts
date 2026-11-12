@@ -24,6 +24,23 @@ export class WebtoonRankingSnapshotOrmEntity {
   @Column({ type: 'varchar', length: 32 })
   genreName!: string;
 
+  // 이 아래는 나중에 추가한 컬럼이라 이전 스냅샷에는 값이 없다
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  author!: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  thumbnailUrl!: string | null;
+
+  // real은 pg 드라이버가 number로 돌려준다. numeric은 문자열이 되므로 쓰지 않는다.
+  @Column({ type: 'real', nullable: true })
+  starScore!: number | null;
+
+  @Column({ type: 'boolean', nullable: true })
+  isRest!: boolean | null;
+
+  @Column({ type: 'boolean', nullable: true })
+  isNew!: boolean | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 }

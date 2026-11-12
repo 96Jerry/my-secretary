@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
 import { WebtoonRankingEntry } from '../domain/webtoon-ranking-entry.entity.js';
-import { WebtoonRankingRepository } from '../domain/webtoon-ranking.repository.js';
+import type {
+  WebtoonHistoryPoint,
+  WebtoonRankingRepository,
+} from '../domain/webtoon-ranking.repository.js';
 import { WebtoonRankingSnapshotOrmEntity } from './webtoon-ranking-snapshot.orm-entity.js';
 
 @Injectable()
@@ -24,7 +27,17 @@ export class WebtoonRankingTypeormRepository implements WebtoonRankingRepository
       .into(WebtoonRankingSnapshotOrmEntity)
       .values(entries.map((e) => ({ snapshotDate: date, ...e })))
       .orUpdate(
-        ['titleName', 'favoriteCount', 'genreCode', 'genreName'],
+        [
+          'titleName',
+          'favoriteCount',
+          'genreCode',
+          'genreName',
+          'author',
+          'thumbnailUrl',
+          'starScore',
+          'isRest',
+          'isNew',
+        ],
         ['snapshotDate', 'titleId'],
       )
       .execute();
@@ -41,6 +54,16 @@ export class WebtoonRankingTypeormRepository implements WebtoonRankingRepository
     return row?.snapshotDate ?? null;
   }
 
+  async findDates(): Promise<string[]> {
+    // findLatestDate와 같은 이유로 date를 그대로 받지 않고 text로 바꿔 읽는다
+    const rows = await this.repo
+      .createQueryBuilder('s')
+      .select('DISTINCT s."snapshotDate"::text', 'date')
+      .orderBy('date', 'ASC')
+      .getRawMany<{ date: string }>();
+    return rows.map((r) => r.date);
+  }
+
   async findByDate(date: string): Promise<WebtoonRankingEntry[]> {
     const rows = await this.repo.find({
       where: { snapshotDate: date },
@@ -54,7 +77,20 @@ export class WebtoonRankingTypeormRepository implements WebtoonRankingRepository
           r.favoriteCount,
           r.genreCode,
           r.genreName,
+          r.author,
+          r.thumbnailUrl,
+          r.starScore,
+          r.isRest,
+          r.isNew,
         ),
     );
+  }
+
+  async findHistory(titleId: number): Promise<WebtoonHistoryPoint[]> {
+    return this.repo.find({
+      select: { snapshotDate: true, favoriteCount: true, starScore: true },
+      where: { titleId },
+      order: { snapshotDate: 'ASC' },
+    });
   }
 }

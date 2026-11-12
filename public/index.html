@@ -8,11 +8,13 @@
   :root {
     --bg: #f7f7f8; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73;
     --line: #e5e5ea; --accent: #00c73c; --accent-text: #fff; --chip: #efeff2;
+    --up: #d93a3a; --down: #2f6fdb;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #111113; --surface: #1c1c1f; --text: #f2f2f4; --muted: #9a9aa0;
       --line: #2c2c31; --accent: #00c73c; --accent-text: #0b0b0c; --chip: #26262b;
+      --up: #ff6b6b; --down: #6aa0ff;
     }
   }
   * { box-sizing: border-box; }
@@ -24,31 +26,57 @@
   header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
   h1 { margin: 0; font-size: 22px; }
   .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
-  button {
-    font: inherit; cursor: pointer; border: 1px solid var(--line); border-radius: 8px;
+  button, select, input {
+    font: inherit; border: 1px solid var(--line); border-radius: 8px;
     background: var(--surface); color: var(--text); padding: 6px 12px;
   }
+  button { cursor: pointer; }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
   button:disabled { opacity: .55; cursor: progress; }
-  .controls { display: flex; gap: 8px; margin: 20px 0 12px; }
-  input[type=search] {
-    flex: 1; min-width: 0; font: inherit; padding: 6px 10px; border-radius: 8px;
-    border: 1px solid var(--line); background: var(--surface); color: var(--text);
-  }
-  .genres { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-  .genres button { background: var(--chip); border-color: transparent; border-radius: 999px; padding: 4px 12px; font-size: 13px; }
-  .genres button[aria-pressed=true] { background: var(--text); color: var(--bg); }
-  .genres small { color: inherit; opacity: .6; margin-left: 4px; }
+  .tabs { display: flex; gap: 4px; margin-top: 20px; border-bottom: 1px solid var(--line); }
+  .tabs button { border: 0; border-radius: 0; background: none; padding: 8px 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button[aria-selected=true] { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
+  .controls { display: flex; gap: 8px; margin: 16px 0 12px; flex-wrap: wrap; align-items: center; }
+  input[type=search] { flex: 1; min-width: 140px; padding: 6px 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chips button { background: var(--chip); border-color: transparent; border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+  .chips button[aria-pressed=true] { background: var(--text); color: var(--bg); }
+  .chips small { color: inherit; opacity: .6; margin-left: 4px; }
+  .period { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+  .period select, .period input { padding: 4px 8px; font-size: 13px; }
+  .period input { width: 7.5em; }
+  .hint { font-size: 12px; color: var(--muted); margin: -4px 0 12px; }
   ol { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-  li { display: grid; grid-template-columns: 3em 1fr auto; align-items: baseline; gap: 8px; padding: 10px 14px; border-top: 1px solid var(--line); }
+  li { border-top: 1px solid var(--line); }
   li:first-child { border-top: 0; }
+  .row { display: grid; grid-template-columns: 2.6em 3.2em minmax(0, 1fr) auto; align-items: baseline; gap: 8px; padding: 10px 14px; width: 100%; border: 0; border-radius: 0; background: none; text-align: left; }
+  .row:hover { background: var(--chip); }
   .rank { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
-  li a { color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  li a:hover { text-decoration: underline; }
-  .genre { color: var(--muted); font-size: 12px; margin-left: 6px; }
-  .count { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .chg { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sub { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .badge { font-size: 11px; border-radius: 4px; padding: 0 4px; margin-left: 4px; border: 1px solid currentColor; vertical-align: 1px; }
+  .badge.new { color: var(--accent); }
+  .badge.rest { color: var(--muted); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .num b { font-weight: 600; }
+  .num small { display: block; font-size: 12px; color: var(--muted); }
   .empty { padding: 32px; text-align: center; color: var(--muted); }
+  .detail { padding: 4px 14px 16px; display: grid; grid-template-columns: 72px 1fr; gap: 12px; }
+  .detail img { width: 72px; border-radius: 6px; }
+  .detail .info { font-size: 13px; color: var(--muted); }
+  .detail .info a { color: var(--text); }
+  .chart { grid-column: 1 / -1; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .axis { fill: var(--muted); font-size: 11px; }
+  .chart .grid { stroke: var(--line); }
+  .chart .line { stroke: var(--accent); fill: none; stroke-width: 2; }
+  .chart .dot { fill: var(--accent); }
   #status { min-height: 1.5em; font-size: 13px; color: var(--muted); }
+  @media (max-width: 520px) {
+    .row { grid-template-columns: 2.2em 2.8em minmax(0, 1fr) auto; padding: 10px; }
+  }
 </style>
 </head>
 <body>
@@ -62,85 +90,313 @@
   </header>
   <div id="status"></div>
 
+  <div class="tabs" role="tablist">
+    <button role="tab" data-view="ranking" aria-selected="true">순위</button>
+    <button role="tab" data-view="movers" aria-selected="false">급상승</button>
+  </div>
+
   <div class="controls">
-    <input type="search" id="search" placeholder="제목 검색">
+    <input type="search" id="search" placeholder="제목·작가 검색">
     <button id="sort" title="정렬 방향 바꾸기">찜 많은 순 ↓</button>
   </div>
-  <div class="genres" id="genres"></div>
+
+  <div id="moverControls" hidden>
+    <div class="controls period">
+      <span>기간</span>
+      <span class="chips" id="presets" style="margin:0"></span>
+      <select id="from" aria-label="시작일"></select> → <select id="to" aria-label="종료일"></select>
+    </div>
+    <div class="chips" id="modes"></div>
+    <div class="hint" id="modeHint"></div>
+  </div>
+
+  <div class="chips" id="genres"></div>
   <ol id="list"></ol>
 </main>
 
 <script>
-  // 전체 목록을 한 번 받아 장르·검색·정렬은 브라우저에서 처리한다.
-  // 순위(rank)는 서버가 매긴 전체 순위를 그대로 보여준다.
-  const state = { data: null, genre: '', query: '', desc: true };
+  // 목록은 한 번 받아 장르·검색·정렬은 브라우저에서 처리한다.
+  const PRESETS = [{ label: '1일', days: 1 }, { label: '7일', days: 7 }, { label: '30일', days: 30 }, { label: '전체', days: null }];
+  const MODES = [
+    { key: 'delta', label: '증가량' },
+    { key: 'rate', label: '증가율' },
+    { key: 'drop', label: '감소' },
+    { key: 'entered', label: '신규 진입' },
+    { key: 'exited', label: '연재 목록 이탈' },
+  ];
+  // 증가율은 찜 수가 적을수록 크게 튄다. 중앙값(약 6만) 근처로 보수적으로 잡고 화면에서 바꿀 수 있게 한다.
+  const DEFAULT_MIN_FAVORITES = 50000;
+
+  const state = {
+    view: 'ranking', ranking: null, movers: null, genre: '', query: '', desc: true,
+    mode: 'delta', preset: 1, from: '', to: '', minFavorites: readMin(), open: null,
+  };
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('ko-KR');
+  const signed = (n) => (n > 0 ? '+' : '') + fmt.format(n);
+  const pct = (r) => (r > 0 ? '+' : '') + (r * 100).toFixed(r !== 0 && Math.abs(r) < 0.01 ? 2 : 1) + '%';
 
-  async function load() {
-    const res = await fetch('/webtoons/ranking');
+  function el(tag, props = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(props)) {
+      if (k === 'class') node.className = v;
+      else if (k.startsWith('on')) node[k] = v;
+      else node.setAttribute(k, v);
+    }
+    node.append(...children.filter((c) => c !== null && c !== undefined && c !== false));
+    return node;
+  }
+
+  function readMin() {
+    try { return Number(localStorage.getItem('minFavorites')) || DEFAULT_MIN_FAVORITES; }
+    catch { return DEFAULT_MIN_FAVORITES; }
+  }
+  function saveMin(v) { try { localStorage.setItem('minFavorites', String(v)); } catch { /* 저장 못 해도 동작엔 지장 없다 */ } }
+
+  async function getJson(url) {
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`조회 실패 (HTTP ${res.status})`);
-    state.data = await res.json();
+    return res.json();
+  }
+
+  async function loadRanking() {
+    state.ranking = await getJson('/webtoons/ranking');
     render();
   }
 
+  async function loadMovers() {
+    const q = new URLSearchParams();
+    if (state.from) q.set('from', state.from);
+    if (state.to) q.set('to', state.to);
+    state.movers = await getJson('/webtoons/ranking/movers?' + q);
+    // 서버가 실제 스냅샷 날짜로 맞춰 준 값을 선택 상자에 반영한다
+    state.from = state.movers.fromDate ?? '';
+    state.to = state.movers.toDate ?? '';
+    render();
+  }
+
+  function shiftDate(iso, days) {
+    const d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() - days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function applyPreset(i) {
+    state.preset = i;
+    const dates = state.movers?.dates ?? [];
+    const latest = dates.at(-1);
+    if (!latest) return;
+    const { days } = PRESETS[i];
+    state.to = latest;
+    state.from = days === null ? dates[0] : shiftDate(latest, days);
+    loadMovers().catch(showError);
+  }
+
   function render() {
-    const { snapshotDate, genres, items } = state.data;
-    $('meta').textContent = snapshotDate
-      ? `${snapshotDate} 기준 · ${fmt.format(items.length)}개 작품`
+    const r = state.ranking;
+    if (!r) return;
+    $('meta').textContent = r.snapshotDate
+      ? `${r.snapshotDate} 기준 · ${fmt.format(r.items.length)}개 작품` + (r.previousDate ? ` · 변동은 ${r.previousDate} 대비` : '')
       : '아직 수집된 데이터가 없습니다. "지금 수집"을 눌러 주세요.';
 
-    const chips = [{ code: '', name: '전체', count: items.length }, ...genres];
-    $('genres').replaceChildren(...chips.map((g) => {
-      const b = document.createElement('button');
-      b.setAttribute('aria-pressed', String(g.code === state.genre));
-      b.append(g.name);
-      const small = document.createElement('small');
-      small.textContent = g.count;
-      b.append(small);
-      b.onclick = () => { state.genre = g.code; render(); };
-      return b;
-    }));
+    document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === state.view)));
+    $('moverControls').hidden = state.view !== 'movers';
+    $('sort').hidden = state.view !== 'ranking';
 
+    const chips = [{ code: '', name: '전체', count: r.items.length }, ...r.genres];
+    $('genres').replaceChildren(...chips.map((g) => el('button', {
+      'aria-pressed': String(g.code === state.genre),
+      onclick: () => { state.genre = g.code; render(); },
+    }, g.name, el('small', {}, g.count))));
+
+    if (state.view === 'ranking') renderRanking();
+    else renderMovers();
+  }
+
+  const matches = (w) => {
     const q = state.query.trim().toLowerCase();
-    // 장르 안에서의 순위를 보여주기 위해 필터 후 다시 번호를 매긴다
-    let rows = items
-      .filter((w) => !state.genre || w.genreCode === state.genre)
-      .map((w, i) => ({ ...w, rank: i + 1 }))
-      .filter((w) => !q || w.titleName.toLowerCase().includes(q));
-    if (!state.desc) rows = rows.reverse();
+    return (!state.genre || w.genreCode === state.genre) &&
+      (!q || w.titleName.toLowerCase().includes(q) || (w.author ?? '').toLowerCase().includes(q));
+  };
 
+  function titleCell(w) {
+    return el('span', { class: 'title' },
+      w.titleName,
+      !state.genre ? el('span', { class: 'sub' }, w.genreName) : null,
+      w.isNew ? el('span', { class: 'badge new' }, '신작') : null,
+      w.isRest ? el('span', { class: 'badge rest' }, '휴재') : null,
+      w.starScore ? el('span', { class: 'sub' }, '★' + w.starScore.toFixed(2)) : null);
+  }
+
+  function rankChange(w) {
+    // 장르 필터 중에는 전체 순위 변동이 헷갈리므로 표시하지 않는다
+    if (state.genre || !state.ranking.previousDate) return el('span', { class: 'chg' });
+    if (w.previousRank === null) return el('span', { class: 'chg up' }, 'NEW');
+    const d = w.previousRank - w.rank;
+    if (d === 0) return el('span', { class: 'chg' }, '–');
+    return el('span', { class: 'chg ' + (d > 0 ? 'up' : 'down') }, (d > 0 ? '▲' : '▼') + Math.abs(d));
+  }
+
+  function renderRanking() {
+    // 장르 안에서의 순위를 보여주기 위해 필터 후 다시 번호를 매긴다
+    let rows = state.ranking.items
+      .filter((w) => !state.genre || w.genreCode === state.genre)
+      .map((w, i) => ({ ...w, shownRank: state.genre ? i + 1 : w.rank }))
+      .filter(matches);
+    if (!state.desc) rows = rows.reverse();
     $('sort').textContent = state.desc ? '찜 많은 순 ↓' : '찜 적은 순 ↑';
+
+    renderList(rows, (w) => {
+      const daily = w.previousFavoriteCount === null ? null : w.favoriteCount - w.previousFavoriteCount;
+      return [
+        el('span', { class: 'rank' }, w.shownRank),
+        rankChange(w),
+        titleCell(w),
+        el('span', { class: 'num' }, el('b', {}, fmt.format(w.favoriteCount)),
+          daily !== null ? el('small', { class: daily > 0 ? 'up' : daily < 0 ? 'down' : '' }, signed(daily)) : null),
+      ];
+    }, state.ranking.snapshotDate ? '조건에 맞는 작품이 없습니다.' : '데이터 없음');
+  }
+
+  function renderMovers() {
+    const m = state.movers;
+    $('presets').replaceChildren(...PRESETS.map((p, i) => el('button', {
+      'aria-pressed': String(state.preset === i),
+      onclick: () => applyPreset(i),
+    }, p.label)));
+    const options = (sel, value) => sel.replaceChildren(...(m?.dates ?? []).map((d) => {
+      const o = el('option', { value: d }, d);
+      o.selected = d === value;
+      return o;
+    }));
+    options($('from'), state.from);
+    options($('to'), state.to);
+
+    $('modes').replaceChildren(...MODES.map((x) => el('button', {
+      'aria-pressed': String(state.mode === x.key),
+      onclick: () => { state.mode = x.key; render(); },
+    }, x.label)));
+
+    const hint = $('modeHint');
+    if (state.mode === 'rate') {
+      const input = el('input', { type: 'number', min: '0', step: '10000', value: String(state.minFavorites), 'aria-label': '최소 찜 수' });
+      input.onchange = () => { state.minFavorites = Math.max(0, Number(input.value) || 0); saveMin(state.minFavorites); render(); };
+      hint.replaceChildren('시작 시점 찜 ', input, ' 이상만 (찜이 적은 작품은 증가율이 크게 튀어서 거릅니다)');
+    } else if (state.mode === 'exited') {
+      hint.textContent = '기간 중 연재 목록에서 빠진 작품입니다. 완결, 연재 중단 등이 여기에 들어갑니다.';
+    } else {
+      hint.textContent = '';
+    }
+
+    if (!m || !m.fromDate) {
+      renderList([], null, (m?.dates.length ?? 0) < 2 ? '비교하려면 스냅샷이 이틀치 이상 필요합니다.' : '선택한 기간에 비교할 스냅샷이 없습니다.');
+      return;
+    }
+
+    let rows;
+    let numCell;
+    if (state.mode === 'entered' || state.mode === 'exited') {
+      rows = m[state.mode].filter(matches);
+      numCell = (w) => el('span', { class: 'num' }, el('b', {}, fmt.format(w.favoriteCount)));
+    } else {
+      rows = m.items.filter(matches);
+      if (state.mode === 'delta') rows = rows.filter((w) => w.delta > 0).sort((a, b) => b.delta - a.delta);
+      if (state.mode === 'drop') rows = rows.filter((w) => w.delta < 0).sort((a, b) => a.delta - b.delta);
+      if (state.mode === 'rate') rows = rows.filter((w) => w.rate !== null && w.rate > 0 && w.fromCount >= state.minFavorites).sort((a, b) => b.rate - a.rate);
+      const main = (w) => state.mode === 'rate' ? pct(w.rate) : signed(w.delta);
+      const side = (w) => state.mode === 'rate' ? signed(w.delta) : (w.rate === null ? '' : pct(w.rate));
+      numCell = (w) => el('span', { class: 'num' },
+        el('b', { class: w.delta > 0 ? 'up' : 'down' }, main(w)),
+        el('small', {}, `${fmt.format(w.fromCount)} → ${fmt.format(w.favoriteCount)} · ${side(w)}`));
+    }
+
+    renderList(rows.map((w, i) => ({ ...w, shownRank: i + 1 })), (w) => [
+      el('span', { class: 'rank' }, w.shownRank),
+      el('span', { class: 'chg' }),
+      titleCell(w),
+      numCell(w),
+    ], '조건에 맞는 작품이 없습니다.');
+  }
+
+  function renderList(rows, cells, emptyText) {
     if (rows.length === 0) {
-      const li = document.createElement('li');
-      li.className = 'empty';
-      li.textContent = snapshotDate ? '조건에 맞는 작품이 없습니다.' : '데이터 없음';
-      $('list').replaceChildren(li);
+      $('list').replaceChildren(el('li', { class: 'empty' }, emptyText));
       return;
     }
     $('list').replaceChildren(...rows.map((w) => {
-      const li = document.createElement('li');
-      const rank = document.createElement('span');
-      rank.className = 'rank';
-      rank.textContent = w.rank;
-      const a = document.createElement('a');
-      a.href = `https://comic.naver.com/webtoon/list?titleId=${w.titleId}`;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.textContent = w.titleName;
-      if (!state.genre) {
-        const g = document.createElement('span');
-        g.className = 'genre';
-        g.textContent = w.genreName;
-        a.append(g);
-      }
-      const count = document.createElement('span');
-      count.className = 'count';
-      count.textContent = fmt.format(w.favoriteCount);
-      li.append(rank, a, count);
+      const li = el('li', {}, el('button', {
+        class: 'row', 'aria-expanded': String(state.open === w.titleId),
+        onclick: () => { state.open = state.open === w.titleId ? null : w.titleId; render(); },
+      }, ...cells(w)));
+      if (state.open === w.titleId) li.append(detail(w));
       return li;
     }));
   }
+
+  // 작품을 펼치면 날짜별 찜 수 추이를 그린다
+  function detail(w) {
+    const box = el('div', { class: 'chart' }, '추이 불러오는 중…');
+    getJson(`/webtoons/ranking/${w.titleId}/history`)
+      .then((points) => box.replaceChildren(chart(points)))
+      .catch((e) => { box.textContent = e.message; });
+    return el('div', { class: 'detail' },
+      w.thumbnailUrl ? el('img', { src: w.thumbnailUrl, alt: '', referrerpolicy: 'no-referrer', loading: 'lazy' }) : el('span'),
+      el('div', { class: 'info' },
+        w.author ? el('div', {}, w.author) : null,
+        el('div', {}, `${w.genreName} · 찜 ${fmt.format(w.favoriteCount)}`),
+        el('a', { href: `https://comic.naver.com/webtoon/list?titleId=${w.titleId}`, target: '_blank', rel: 'noopener' }, '네이버 웹툰에서 보기 ↗')),
+      box);
+  }
+
+  function chart(points) {
+    if (points.length < 2) return el('span', { class: 'info' }, '추이를 그리려면 이틀치 이상 필요합니다.');
+    const W = 600, H = 170, L = 64, R = 12, T = 12, B = 26;
+    const ys = points.map((p) => p.favoriteCount);
+    let lo = Math.min(...ys), hi = Math.max(...ys);
+    if (lo === hi) { lo -= 1; hi += 1; }
+    const x = (i) => L + (i * (W - L - R)) / (points.length - 1);
+    const y = (v) => T + ((hi - v) * (H - T - B)) / (hi - lo);
+    const ns = 'http://www.w3.org/2000/svg';
+    const s = (tag, attrs, text) => {
+      const n = document.createElementNS(ns, tag);
+      for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+      if (text !== undefined) n.textContent = text;
+      return n;
+    };
+    const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+    const first = points[0], last = points.at(-1);
+    svg.setAttribute('aria-label', `${first.snapshotDate} ${fmt.format(first.favoriteCount)}에서 ${last.snapshotDate} ${fmt.format(last.favoriteCount)}`);
+    for (const v of [hi, (hi + lo) / 2, lo]) {
+      svg.append(s('line', { class: 'grid', x1: L, x2: W - R, y1: y(v), y2: y(v) }));
+      svg.append(s('text', { class: 'axis', x: L - 6, y: y(v) + 4, 'text-anchor': 'end' }, fmt.format(Math.round(v))));
+    }
+    svg.append(s('text', { class: 'axis', x: L, y: H - 6 }, first.snapshotDate));
+    svg.append(s('text', { class: 'axis', x: W - R, y: H - 6, 'text-anchor': 'end' }, last.snapshotDate));
+    svg.append(s('polyline', { class: 'line', points: points.map((p, i) => `${x(i)},${y(p.favoriteCount)}`).join(' ') }));
+    points.forEach((p, i) => {
+      const dot = s('circle', { class: 'dot', cx: x(i), cy: y(p.favoriteCount), r: points.length > 40 ? 1.5 : 3 });
+      dot.append(s('title', {}, `${p.snapshotDate}: ${fmt.format(p.favoriteCount)}` + (i ? ` (${signed(p.favoriteCount - points[i - 1].favoriteCount)})` : '')));
+      svg.append(dot);
+    });
+    const days = (Date.parse(last.snapshotDate) - Date.parse(first.snapshotDate)) / 86400000;
+    const total = last.favoriteCount - first.favoriteCount;
+    return el('div', {}, svg, el('div', { class: 'info' },
+      `${days}일간 ${signed(total)} · 하루 평균 ${signed(Math.round(total / days))}`));
+  }
+
+  function showError(e) { $('status').textContent = e.message; }
+
+  document.querySelectorAll('.tabs button').forEach((b) => {
+    b.onclick = () => {
+      state.view = b.dataset.view;
+      state.open = null;
+      // 처음엔 날짜 목록부터 받아야 기본 기간(7일)을 계산할 수 있다
+      if (state.view === 'movers' && !state.movers) loadMovers().then(() => applyPreset(state.preset)).catch(showError);
+      render();
+    };
+  });
+  $('from').onchange = (e) => { state.from = e.target.value; state.preset = null; loadMovers().catch(showError); };
+  $('to').onchange = (e) => { state.to = e.target.value; state.preset = null; loadMovers().catch(showError); };
 
   $('refresh').onclick = async () => {
     const btn = $('refresh');
@@ -154,9 +410,11 @@
       $('status').textContent =
         `${fmt.format(r.saved)}개 저장` + (r.failed ? `, 실패 ${r.failed}개` : '') +
         ` · ${(r.elapsedMs / 1000).toFixed(1)}초`;
-      await load();
+      state.movers = null;
+      await loadRanking();
+      if (state.view === 'movers') await loadMovers();
     } catch (e) {
-      $('status').textContent = e.message;
+      showError(e);
     } finally {
       btn.disabled = false;
       btn.textContent = '지금 수집';
@@ -166,7 +424,7 @@
   $('search').oninput = (e) => { state.query = e.target.value; render(); };
   $('sort').onclick = () => { state.desc = !state.desc; render(); };
 
-  load().catch((e) => { $('meta').textContent = e.message; });
+  loadRanking().catch((e) => { $('meta').textContent = e.message; });
 </script>
 </body>
 </html>
