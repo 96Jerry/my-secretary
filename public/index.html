@@ -18,6 +18,8 @@
     }
   }
   * { box-sizing: border-box; }
+  /* .chips 등의 display 지정이 hidden 속성을 덮어쓰지 않도록 */
+  [hidden] { display: none !important; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
@@ -59,6 +61,22 @@
   .badge { font-size: 11px; border-radius: 4px; padding: 0 4px; margin-left: 4px; border: 1px solid currentColor; vertical-align: 1px; }
   .badge.new { color: var(--accent); }
   .badge.rest { color: var(--muted); }
+  .badge.mine { color: var(--down); }
+  .badge.warn { color: var(--up); }
+  .row.log { grid-template-columns: minmax(0, 1fr) auto; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; display: grid; gap: 10px; }
+  .panel .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .panel label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+  .panel label.wide { grid-column: 1 / -1; }
+  .panel input, .panel select, .panel textarea { font-size: 14px; padding: 6px 8px; width: 100%; }
+  textarea { font: inherit; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text); resize: vertical; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .actions .danger { color: var(--up); margin-left: auto; }
+  .preview { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .preview th, .preview td { text-align: left; padding: 4px 6px; border-top: 1px solid var(--line); }
+  .preview th { color: var(--muted); font-weight: 500; }
+  .timeline { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+  .err { color: var(--up); font-size: 13px; white-space: pre-line; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .num b { font-weight: 600; }
   .num small { display: block; font-size: 12px; color: var(--muted); }
@@ -93,11 +111,17 @@
   <div class="tabs" role="tablist">
     <button role="tab" data-view="ranking" aria-selected="true">순위</button>
     <button role="tab" data-view="movers" aria-selected="false">급상승</button>
+    <button role="tab" data-view="logs" aria-selected="false">내 기록</button>
   </div>
 
   <div class="controls">
     <input type="search" id="search" placeholder="제목·작가 검색">
     <button id="sort" title="정렬 방향 바꾸기">찜 많은 순 ↓</button>
+    <select id="mine" aria-label="내 기록 필터" hidden>
+      <option value="all">내 기록: 전체</option>
+      <option value="hide">본 작품 빼기</option>
+      <option value="only">본 작품만</option>
+    </select>
   </div>
 
   <div id="moverControls" hidden>
@@ -110,8 +134,24 @@
     <div class="hint" id="modeHint"></div>
   </div>
 
+  <div id="logControls" hidden>
+    <div class="actions" style="margin-bottom:12px">
+      <button class="primary" id="addLog">+ 기록 추가</button>
+      <button id="bulkLog">목록 붙여넣기</button>
+      <select id="logSort" aria-label="정렬">
+        <option value="stale">오래 안 본 순</option>
+        <option value="recent">최근 본 순</option>
+        <option value="unread">밀린 회차 많은 순</option>
+        <option value="title">제목순</option>
+      </select>
+    </div>
+    <div id="logPanel"></div>
+    <div class="chips" id="logStatuses"></div>
+  </div>
+
   <div class="chips" id="genres"></div>
   <ol id="list"></ol>
+  <datalist id="naverTitles"></datalist>
 </main>
 
 <script>
@@ -127,9 +167,23 @@
   // 증가율은 찜 수가 적을수록 크게 튄다. 중앙값(약 6만) 근처로 보수적으로 잡고 화면에서 바꿀 수 있게 한다.
   const DEFAULT_MIN_FAVORITES = 50000;
 
+  const PLATFORMS = { naver: '네이버웹툰', kakaopage: '카카오페이지', kakaowebtoon: '카카오웹툰', ridi: '리디', lezhin: '레진', bomtoon: '봄툰', etc: '기타' };
+  const STATUSES = { reading: '보는 중', completed: '완독', paused: '보류', dropped: '하차' };
+  const VERDICTS = { best: '인생작', good: '재밌음', okay: '보통', bad: '별로', worst: '최악 (쳐다보기도 싫음)' };
+  const VERDICT_SHORT = { ...VERDICTS, worst: '최악' };
+  // 붙여넣기에서 알아듣는 표기. 공백은 무시하고 비교한다
+  const ALIASES = {
+    platform: { 네이버: 'naver', 네웹: 'naver', 네이버웹툰: 'naver', naver: 'naver', 카카오페이지: 'kakaopage', 카페: 'kakaopage', 카카페: 'kakaopage', kakaopage: 'kakaopage', 카카오웹툰: 'kakaowebtoon', 카웹: 'kakaowebtoon', kakaowebtoon: 'kakaowebtoon', 리디: 'ridi', 리디북스: 'ridi', ridi: 'ridi', 레진: 'lezhin', 레진코믹스: 'lezhin', lezhin: 'lezhin', 봄툰: 'bomtoon', bomtoon: 'bomtoon', 기타: 'etc', etc: 'etc' },
+    status: { 보는중: 'reading', 연재중: 'reading', reading: 'reading', 완독: 'completed', 완결: 'completed', completed: 'completed', 보류: 'paused', paused: 'paused', 하차: 'dropped', dropped: 'dropped' },
+    verdict: { 인생작: 'best', best: 'best', 재밌음: 'good', 재미있음: 'good', good: 'good', 보통: 'okay', okay: 'okay', 별로: 'bad', bad: 'bad', 최악: 'worst', worst: 'worst' },
+  };
+
   const state = {
     view: 'ranking', ranking: null, movers: null, genre: '', query: '', desc: true,
     mode: 'delta', preset: 1, from: '', to: '', minFavorites: readMin(), open: null,
+    logs: null, logStatus: '', logSort: 'stale', mine: 'all',
+    // null | { mode: 'edit', log } | { mode: 'bulk', text, rows, error }
+    panel: null,
   };
   const $ = (id) => document.getElementById(id);
   const fmt = new Intl.NumberFormat('ko-KR');
@@ -157,6 +211,103 @@
     const res = await fetch(url);
     if (!res.ok) throw new Error(`조회 실패 (HTTP ${res.status})`);
     return res.json();
+  }
+
+  async function send(method, url, body) {
+    const res = await fetch(url, {
+      method, headers: { 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    if (res.status === 204) return null;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const m = data.message;
+      throw new Error(Array.isArray(m) ? m.join('\n') : (m || `요청 실패 (HTTP ${res.status})`));
+    }
+    return data;
+  }
+
+  const logsUrl = () => '/webtoons/logs';
+
+  async function loadLogs() {
+    state.logs = await getJson(logsUrl());
+    render();
+  }
+
+  const todayKst = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+  function ago(iso) {
+    if (!iso) return '날짜 모름';
+    const days = Math.floor((Date.parse(todayKst()) - Date.parse(iso)) / 86400000);
+    if (days <= 0) return '오늘';
+    if (days < 30) return `${days}일 전`;
+    if (days < 365) return `${Math.floor(days / 30)}개월 전`;
+    return `${Math.floor(days / 365)}년 전`;
+  }
+  const logByNaverId = () => new Map((state.logs ?? []).filter((l) => l.naverTitleId).map((l) => [l.naverTitleId, l]));
+
+  // ---------- 제목 맞추기 (네이버 연결·오타 찾기) ----------
+  const norm = (t) => t.replace(/\s+/g, '').toLowerCase();
+  const naverTitles = () => state.ranking?.items.map((w) => w.titleName) ?? [];
+  const naverNameById = () => new Map(state.ranking?.items.map((w) => [w.titleId, w.titleName]) ?? []);
+  const naverUrl = (id) => `https://comic.naver.com/webtoon/list?titleId=${id}`;
+  const linkOf = (l) => l.url || (l.naverTitleId ? naverUrl(l.naverTitleId) : null);
+  const rankById = () => new Map(state.ranking?.items.map((w) => [w.titleId, w]) ?? []);
+
+  // 주소 도메인으로 플랫폼을 알아본다. 링크 문구도 플랫폼 칸이 아니라 주소 기준으로 정한다
+  const PLATFORM_HOSTS = [
+    [/(^|\.)comic\.naver\.com$/, 'naver'],
+    [/(^|\.)webtoon\.kakao\.com$/, 'kakaowebtoon'],
+    [/(^|\.)page\.kakao\.com$/, 'kakaopage'],
+    [/(^|\.)ridibooks\.com$|(^|\.)ridi\.com$/, 'ridi'],
+    [/(^|\.)lezhin\.com$/, 'lezhin'],
+    [/(^|\.)bomtoon\.com$/, 'bomtoon'],
+  ];
+  function platformFromUrl(url) {
+    try {
+      const host = new URL(url).hostname;
+      return PLATFORM_HOSTS.find(([re]) => re.test(host))?.[1] ?? null;
+    } catch { return null; }
+  }
+  function linkLabel(l) {
+    const p = l.url ? platformFromUrl(l.url) : 'naver';
+    return p ? `${PLATFORMS[p]}에서 보기 ↗` : '작품 페이지 열기 ↗';
+  }
+
+  // 서버와 같은 규칙: comic.naver.com 주소의 titleId
+  function naverIdFromUrl(url) {
+    try {
+      const u = new URL(url);
+      if (!/(^|\.)comic\.naver\.com$/.test(u.hostname)) return null;
+      const id = Number(u.searchParams.get('titleId'));
+      return Number.isInteger(id) && id > 0 ? id : null;
+    } catch { return null; }
+  }
+
+  function editDistance(a, b) {
+    let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+    for (let i = 1; i <= a.length; i++) {
+      const cur = [i];
+      for (let j = 1; j <= b.length; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  // 공백·대소문자를 무시하고 똑같은 제목
+  const sameTitle = (title, candidates) => candidates.find((c) => norm(c) === norm(title)) ?? null;
+  // 정확히 같지는 않지만 몇 글자만 다른 제목. 오타 후보로 보여준다
+  function similarTitles(title, candidates, limit = 3) {
+    const k = norm(title);
+    if (!k) return [];
+    const max = Math.max(1, Math.floor(k.length / 3));
+    return candidates
+      .map((c) => ({ c, d: editDistance(k, norm(c)) }))
+      .filter((x) => x.d > 0 && x.d <= max)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, limit)
+      .map((x) => x.c);
   }
 
   async function loadRanking() {
@@ -201,7 +352,13 @@
 
     document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === state.view)));
     $('moverControls').hidden = state.view !== 'movers';
+    $('logControls').hidden = state.view !== 'logs';
+    $('genres').hidden = state.view === 'logs';
     $('sort').hidden = state.view !== 'ranking';
+    $('mine').hidden = state.view === 'logs' || !state.logs?.length;
+    if (!$('naverTitles').childElementCount) {
+      $('naverTitles').replaceChildren(...r.items.map((w) => el('option', { value: w.titleName })));
+    }
 
     const chips = [{ code: '', name: '전체', count: r.items.length }, ...r.genres];
     $('genres').replaceChildren(...chips.map((g) => el('button', {
@@ -210,18 +367,28 @@
     }, g.name, el('small', {}, g.count))));
 
     if (state.view === 'ranking') renderRanking();
-    else renderMovers();
+    else if (state.view === 'movers') renderMovers();
+    else renderLogs();
   }
 
   const matches = (w) => {
     const q = state.query.trim().toLowerCase();
+    const seen = state.mine === 'all' || !state.logs ? null : logByNaverId().has(w.titleId);
     return (!state.genre || w.genreCode === state.genre) &&
+      (seen === null || (state.mine === 'only') === seen) &&
       (!q || w.titleName.toLowerCase().includes(q) || (w.author ?? '').toLowerCase().includes(q));
   };
+
+  // 추천 목록에서 내가 이미 본 작품임을 상태로만 알린다. 하차는 눈에 띄게
+  function mineBadge(log) {
+    if (!log) return null;
+    return el('span', { class: 'badge ' + (log.status === 'dropped' ? 'warn' : 'mine') }, STATUSES[log.status]);
+  }
 
   function titleCell(w) {
     return el('span', { class: 'title' },
       w.titleName,
+      mineBadge(logByNaverId().get(w.titleId)),
       !state.genre ? el('span', { class: 'sub' }, w.genreName) : null,
       w.isNew ? el('span', { class: 'badge new' }, '신작') : null,
       w.isRest ? el('span', { class: 'badge rest' }, '휴재') : null,
@@ -318,19 +485,264 @@
     ], '조건에 맞는 작품이 없습니다.');
   }
 
-  function renderList(rows, cells, emptyText) {
+  function renderList(rows, cells, emptyText, opts = {}) {
+    const { key = (w) => w.titleId, expand = detail, rowClass = 'row' } = opts;
     if (rows.length === 0) {
       $('list').replaceChildren(el('li', { class: 'empty' }, emptyText));
       return;
     }
     $('list').replaceChildren(...rows.map((w) => {
+      const k = key(w);
       const li = el('li', {}, el('button', {
-        class: 'row', 'aria-expanded': String(state.open === w.titleId),
-        onclick: () => { state.open = state.open === w.titleId ? null : w.titleId; render(); },
+        class: rowClass, 'aria-expanded': String(state.open === k),
+        onclick: () => { state.open = state.open === k ? null : k; render(); },
       }, ...cells(w)));
-      if (state.open === w.titleId) li.append(detail(w));
+      if (state.open === k) li.append(expand(w));
       return li;
     }));
+  }
+
+  // ---------- 내 기록 ----------
+  function renderLogs() {
+    if (!state.logs) {
+      $('list').replaceChildren(el('li', { class: 'empty' }, '불러오는 중…'));
+      return;
+    }
+    const counts = {};
+    for (const l of state.logs) counts[l.status] = (counts[l.status] ?? 0) + 1;
+    const chips = [['', '전체', state.logs.length], ...Object.entries(STATUSES).map(([k, v]) => [k, v, counts[k] ?? 0])];
+    $('logStatuses').replaceChildren(...chips.map(([k, label, n]) => el('button', {
+      'aria-pressed': String(state.logStatus === k),
+      onclick: () => { state.logStatus = k; render(); },
+    }, label, el('small', {}, n))));
+
+    const q = state.query.trim().toLowerCase();
+    const byDate = (dir) => (a, b) => {
+      // 날짜를 모르는 기록은 항상 뒤로
+      if (!a.lastReadAt || !b.lastReadAt) return (a.lastReadAt ? -1 : 0) + (b.lastReadAt ? 1 : 0);
+      return dir * a.lastReadAt.localeCompare(b.lastReadAt);
+    };
+    const sorters = {
+      stale: byDate(1),
+      recent: byDate(-1),
+      unread: (a, b) => (b.unread ?? -1) - (a.unread ?? -1),
+      title: (a, b) => a.title.localeCompare(b.title, 'ko'),
+    };
+    const rows = state.logs
+      .filter((l) => !state.logStatus || l.status === state.logStatus)
+      .filter((l) => !q || l.title.toLowerCase().includes(q) || (l.memo ?? '').toLowerCase().includes(q))
+      .sort(sorters[state.logSort]);
+
+    renderList(rows, (l) => [
+      el('span', { class: 'title' }, l.title,
+        el('span', { class: 'sub' }, PLATFORMS[l.platform]),
+        rankById().get(l.naverTitleId) ? el('span', { class: 'sub' }, `찜 ${rankById().get(l.naverTitleId).rank}위`) : null,
+        l.platform === 'naver' && !l.naverTitleId ? el('span', { class: 'badge rest', title: '제목이 네이버 연재 목록과 다르거나 완결작입니다. 수정에서 링크에 네이버 주소를 넣으면 연결됩니다.' }, '순위 미연결') : null,
+        el('span', { class: 'badge ' + (l.status === 'dropped' ? 'warn' : 'mine') }, STATUSES[l.status]),
+        l.verdict ? el('span', { class: 'badge ' + (l.verdict === 'bad' || l.verdict === 'worst' ? 'warn' : 'new') }, VERDICT_SHORT[l.verdict]) : null),
+      el('span', { class: 'num' },
+        el('b', {}, l.episode !== null ? `${fmt.format(l.episode)}화` : '–'),
+        el('small', { class: l.unread ? 'up' : '' }, l.unread ? `${l.unread}화 안 봄 · ${ago(l.lastReadAt)}` : ago(l.lastReadAt))),
+    ], state.logs.length ? '조건에 맞는 기록이 없습니다.' : '아직 기록이 없습니다. "+ 기록 추가"나 "목록 붙여넣기"로 시작하세요.',
+    { key: (l) => l.id, expand: logDetail, rowClass: 'row log' });
+  }
+
+  function logDetail(l) {
+    const timeline = el('ol', { class: 'timeline' }, el('li', {}, '이력 불러오는 중…'));
+    getJson(`${logsUrl()}/${l.id}/history`).then((hs) => timeline.replaceChildren(...hs.slice().reverse().map((h) => el('li', {},
+      `${h.readAt ?? '날짜 모름'} · ${STATUSES[h.status]}` + (h.episode !== null ? ` · ${h.episode}화` : '') + (h.verdict ? ` · ${VERDICT_SHORT[h.verdict]}` : ''))))).catch((e) => { timeline.textContent = e.message; });
+    return el('div', { class: 'detail', style: 'grid-template-columns:1fr' },
+      el('div', { class: 'info' },
+        (() => {
+          const r = rankById().get(l.naverTitleId);
+          return r ? el('div', {}, `찜 순위 ${r.rank}위 · 찜 ${fmt.format(r.favoriteCount)} (${state.ranking.snapshotDate} 기준)`) : null;
+        })(),
+        l.latestEpisode !== null ? el('div', {},
+          `네이버에 공개된 최신 회차 ${l.latestEpisode}화` + (l.latestPublishedAt ? ` (${l.latestPublishedAt} 공개)` : '') +
+          (l.episode !== null ? ` · 나는 ${l.episode}화까지 봄` + (l.unread ? ` → ${l.unread}화 안 봄` : ' → 다 따라잡음') : '')) : null,
+        l.memo ? el('div', { style: 'white-space:pre-line;color:var(--text)' }, l.memo) : null,
+        linkOf(l) ? el('a', { href: linkOf(l), target: '_blank', rel: 'noopener' }, linkLabel(l)) : null),
+      timeline,
+      el('div', { class: 'actions' },
+        el('button', { onclick: () => { state.panel = { mode: 'edit', log: l }; renderLogPanel(); scrollTo({ top: 0, behavior: 'smooth' }); } }, '수정'),
+        el('button', { class: 'danger', onclick: () => removeLog(l) }, '삭제')));
+  }
+
+  async function removeLog(l) {
+    if (!confirm(`"${l.title}" 기록과 이력을 모두 지울까요?`)) return;
+    try {
+      await send('DELETE', `${logsUrl()}/${l.id}`);
+      state.open = null;
+      await loadLogs();
+    } catch (e) { showError(e); }
+  }
+
+  function select(name, options, value, blank) {
+    const s = el('select', { name });
+    if (blank) s.append(el('option', { value: '' }, blank));
+    for (const [k, v] of Object.entries(options)) {
+      const o = el('option', { value: k }, v);
+      o.selected = k === value;
+      s.append(o);
+    }
+    return s;
+  }
+
+  // 입력 중인 값이 날아가지 않도록 render()와 따로, 패널을 열고 닫을 때만 다시 그린다
+  function renderLogPanel() {
+    const p = state.panel;
+    if (!p) { $('logPanel').replaceChildren(); return; }
+    if (p.mode === 'bulk') { $('logPanel').replaceChildren(bulkPanel(p)); return; }
+
+    const l = p.log ?? {};
+    const isNew = !l.id;
+    const field = (label, input, wide) => el('label', wide ? { class: 'wide' } : {}, label, input);
+    const title = el('input', { name: 'title', list: 'naverTitles', required: '', value: l.title ?? '', autocomplete: 'off' });
+    const episode = el('input', { name: 'episode', type: 'number', min: '0', value: l.episode ?? '' });
+    const date = el('input', { name: 'lastReadAt', type: 'date', value: isNew ? todayKst() : (l.lastReadAt ?? '') });
+    const memo = el('textarea', { name: 'memo', rows: '2' });
+    memo.value = l.memo ?? '';
+    const url = el('input', { name: 'url', type: 'url', value: l.url ?? '', placeholder: 'https://comic.naver.com/webtoon/list?titleId=…' });
+    const platform = select('platform', PLATFORMS, l.platform ?? 'naver');
+    const linkStatus = el('div', { class: 'info' });
+    const error = el('div', { class: 'err' });
+    const form = el('form', { class: 'panel' },
+      el('b', {}, isNew ? '기록 추가' : `"${l.title}" 수정`),
+      el('div', { class: 'fields' },
+        field('제목', title, true),
+        field('링크 (주소로 플랫폼을 알아봅니다. 네이버 주소면 완결작도 순위와 연결)', url, true),
+        el('div', { class: 'wide', style: 'grid-column:1/-1' }, linkStatus),
+        field('플랫폼', platform),
+        field('본 회차', episode),
+        field('상태', select('status', STATUSES, l.status ?? 'reading')),
+        field('평가', select('verdict', VERDICTS, l.verdict ?? '', '선택 안 함')),
+        field('마지막으로 본 날', date),
+        field('메모', memo, true)),
+      error,
+      el('div', { class: 'actions' },
+        el('button', { class: 'primary', type: 'submit' }, '저장'),
+        el('button', { type: 'button', onclick: () => { state.panel = null; renderLogPanel(); } }, '취소')));
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const f = new FormData(form);
+      const body = Object.fromEntries(f);
+      body.episode = body.episode === '' ? null : Number(body.episode);
+      // 제목이 그대로면 기존 연결을 유지하고, 바뀌면 서버가 다시 찾게 한다
+      body.naverTitleId = !isNew && body.title === l.title && body.url === (l.url ?? '') ? l.naverTitleId : null;
+      try {
+        await send(isNew ? 'POST' : 'PUT', isNew ? logsUrl() : `${logsUrl()}/${l.id}`, body);
+        state.panel = null;
+        renderLogPanel();
+        await loadLogs();
+      } catch (err) { error.textContent = err.message; }
+    };
+    // 저장 전에 네이버 순위와 연결되는지 바로 보여준다
+    const updateLink = () => {
+      const urlPlatform = platformFromUrl(url.value.trim());
+      if (urlPlatform) platform.value = urlPlatform;
+      const fromUrl = naverIdFromUrl(url.value.trim());
+      if (fromUrl) {
+        const name = naverNameById().get(fromUrl);
+        if (!title.value.trim() && name) title.value = name;
+        linkStatus.textContent = `✓ 네이버 작품 #${fromUrl}로 연결합니다` + (name ? ` (${name})` : ' (순위에 없는 완결작 등)');
+        return;
+      }
+      if (platform.value !== 'naver' || !title.value.trim()) { linkStatus.textContent = ''; return; }
+      const exact = sameTitle(title.value, naverTitles());
+      if (exact) { linkStatus.textContent = `✓ 순위의 "${exact}"와 연결합니다`; return; }
+      if (!isNew && title.value === l.title && l.naverTitleId) { linkStatus.textContent = '✓ 연결되어 있습니다'; return; }
+      const similar = similarTitles(title.value, naverTitles());
+      linkStatus.replaceChildren('✗ 네이버 연재 목록에서 못 찾았습니다. ',
+        ...(similar.length ? ['혹시: ', ...similar.map((c) => el('button', { type: 'button', style: 'padding:0 6px;margin-right:4px', onclick: () => { title.value = c; updateLink(); } }, c))] : []),
+        similar.length ? '' : '완결작이면 링크에 네이버 주소를 넣어 주세요.');
+    };
+    title.oninput = updateLink;
+    url.oninput = updateLink;
+    platform.onchange = updateLink;
+    updateLink();
+    $('logPanel').replaceChildren(form);
+    if (isNew) title.focus();
+  }
+
+  // 한 줄에 한 작품. 첫 칸은 제목, 나머지는 순서 상관없이 내용으로 알아본다
+  function parseBulk(text) {
+    const norm = (s) => s.replace(/\s+/g, '').toLowerCase();
+    return text.split('\n').map((line, i) => ({ line, n: i + 1 })).filter((x) => x.line.trim()).map(({ line, n }) => {
+      const [title, ...rest] = line.split(/\t|\|/).map((s) => s.trim());
+      const row = { n, title, platform: 'naver', episode: null, status: 'reading', verdict: null, lastReadAt: null, memo: null, url: null };
+      const memo = [];
+      let explicit = false;
+      for (const cell of rest.filter(Boolean)) {
+        const k = norm(cell);
+        let m;
+        if (/^https?:\/\//i.test(cell)) row.url = cell;
+        else if (ALIASES.platform[k]) { row.platform = ALIASES.platform[k]; explicit = true; }
+        else if (ALIASES.status[k]) row.status = ALIASES.status[k];
+        else if (ALIASES.verdict[k]) row.verdict = ALIASES.verdict[k];
+        else if ((m = /^(\d+)화?(까지)?$/.exec(k))) row.episode = Number(m[1]);
+        else if ((m = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})$/.exec(k))) row.lastReadAt = `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+        else memo.push(cell);
+      }
+      row.memo = memo.join(' / ') || null;
+      // 플랫폼을 직접 적지 않았으면 주소로 정한다
+      if (!explicit && row.url) row.platform = platformFromUrl(row.url) ?? row.platform;
+      return row;
+    });
+  }
+
+  function bulkPanel(p) {
+    const area = el('textarea', { rows: '8', placeholder: '화산귀환 | 네이버 | 1250화 | 보는 중 | 재밌음 | 2026-11-10\n전지적 독자 시점 | 네이버 | 완독 | 인생작\n어떤 작품 | 카카오페이지 | 12화 | 하차 | 최악 | 그림체가 안 맞음' });
+    area.value = p.text ?? '';
+    const preview = () => { p.text = area.value; p.rows = parseBulk(area.value); p.error = ''; renderLogPanel(); };
+    const children = [
+      el('b', {}, '목록 붙여넣기'),
+      el('div', { class: 'info' }, '한 줄에 한 작품씩, 칸은 | 또는 탭(엑셀·시트에서 복사)으로 나눕니다. 첫 칸은 제목이고, 나머지(플랫폼·회차·상태·평가·날짜·링크)는 순서 상관없이 알아봅니다. 알아보지 못한 칸은 메모가 됩니다. 플랫폼을 안 적으면 네이버로, 상태를 안 적으면 보는 중으로 넣습니다. 이미 있는 작품은 덮어씁니다.'),
+      area,
+      el('div', { class: 'actions' },
+        el('button', { type: 'button', onclick: preview }, '미리보기'),
+        p.rows?.length ? el('button', { class: 'primary', type: 'button', onclick: () => saveBulk(p) }, `${p.rows.length}개 저장`) : null,
+        el('button', { type: 'button', onclick: () => { state.panel = null; renderLogPanel(); } }, '닫기')),
+    ];
+    if (p.error) children.push(el('div', { class: 'err' }, p.error));
+    if (p.rows?.length) {
+      children.push(el('div', { style: 'overflow-x:auto' }, el('table', { class: 'preview' },
+        el('tr', {}, ...['줄', '제목', '플랫폼', '회차', '상태', '평가', '날짜', '메모', '확인'].map((h) => el('th', {}, h))),
+        ...p.rows.map((r) => {
+          const note = bulkNote(r);
+          return el('tr', {}, ...[r.n, r.title, PLATFORMS[r.platform], r.episode ?? '', STATUSES[r.status], r.verdict ? VERDICT_SHORT[r.verdict] : '', r.lastReadAt ?? '', r.memo ?? ''].map((v) => el('td', {}, String(v))),
+            el('td', { class: note.warn ? 'err' : 'info' }, note.text));
+        }))));
+    }
+    return el('div', { class: 'panel' }, ...children);
+  }
+
+  // 저장하면 어떻게 되는지 미리 알려 준다. 오타로 다른 작품이 되는 경우를 잡는 게 목적
+  function bulkNote(r) {
+    const mine = (state.logs ?? []).filter((l) => l.platform === r.platform).map((l) => l.title);
+    // 서버도 띄어쓰기·대소문자를 무시하고 같은 작품으로 본다
+    const existing = sameTitle(r.title, mine);
+    if (existing) return { text: existing === r.title ? '기존 기록 덮어씀' : `기존 "${existing}" 덮어씀 (띄어쓰기 차이)` };
+    const nearMine = similarTitles(r.title, mine, 1)[0];
+    if (nearMine) return { warn: true, text: `기존 "${nearMine}"와 비슷 — 오타면 새 기록이 따로 생깁니다` };
+    if (r.platform !== 'naver') return { text: '새 기록' };
+    if (r.url && naverIdFromUrl(r.url)) return { text: '새 기록 · 주소로 순위 연결' };
+    const exact = sameTitle(r.title, naverTitles());
+    if (exact) return { text: '새 기록 · 순위 연결' };
+    const near = similarTitles(r.title, naverTitles());
+    return { warn: true, text: near.length ? `네이버 목록에 없음 — 혹시: ${near.join(', ')}` : '네이버 연재 목록에 없음 (완결작이면 주소를 붙여 주세요)' };
+  }
+
+  async function saveBulk(p) {
+    try {
+      const r = await send('POST', `${logsUrl()}/import`, p.rows.map(({ n, ...row }) => row));
+      $('status').textContent = `새로 ${r.created}개, 덮어쓰기 ${r.updated}개 저장했습니다.`;
+      state.panel = null;
+      renderLogPanel();
+      await loadLogs();
+    } catch (e) {
+      p.error = e.message;
+      renderLogPanel();
+    }
   }
 
   // 작품을 펼치면 날짜별 찜 수 추이를 그린다
@@ -395,6 +807,10 @@
       render();
     };
   });
+  $('mine').onchange = (e) => { state.mine = e.target.value; render(); };
+  $('logSort').onchange = (e) => { state.logSort = e.target.value; render(); };
+  $('addLog').onclick = () => { state.panel = { mode: 'edit', log: null }; renderLogPanel(); };
+  $('bulkLog').onclick = () => { state.panel = { mode: 'bulk', text: '', rows: [] }; renderLogPanel(); };
   $('from').onchange = (e) => { state.from = e.target.value; state.preset = null; loadMovers().catch(showError); };
   $('to').onchange = (e) => { state.to = e.target.value; state.preset = null; loadMovers().catch(showError); };
 
@@ -425,6 +841,7 @@
   $('sort').onclick = () => { state.desc = !state.desc; render(); };
 
   loadRanking().catch((e) => { $('meta').textContent = e.message; });
+  loadLogs().catch(showError);
 </script>
 </body>
 </html>

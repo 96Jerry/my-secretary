@@ -172,6 +172,12 @@ export class WebtoonRankingService {
     };
   }
 
+  /** 최신 스냅샷의 작품 목록. 열람 기록을 네이버 작품과 연결할 때 쓴다 */
+  async getLatestTitles(): Promise<WebtoonRankingEntry[]> {
+    const date = await this.repository.findLatestDate();
+    return date ? this.repository.findByDate(date) : [];
+  }
+
   getHistory(titleId: number): Promise<WebtoonHistoryPoint[]> {
     return this.repository.findHistory(titleId);
   }

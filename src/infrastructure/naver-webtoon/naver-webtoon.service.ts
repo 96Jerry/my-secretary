@@ -6,6 +6,7 @@ import { Injectable, Logger } from '@nestjs/common';
 // 찜 수는 공식 UI 정렬에 없을 뿐, 상세 API가 숫자로 그대로 내려준다.
 const TITLE_LIST_URL = 'https://comic.naver.com/api/webtoon/titlelist/weekday';
 const ARTICLE_INFO_URL = 'https://comic.naver.com/api/article/list/info';
+const ARTICLE_LIST_URL = 'https://comic.naver.com/api/article/list';
 
 const HEADERS: Record<string, string> = {
   'User-Agent': 'my-secretary-bot/1.0 (personal webtoon ranking)',
@@ -39,6 +40,13 @@ export interface NaverWebtoon extends TitleInfo {
   favoriteCount: number;
   genreCode: string;
   genreName: string;
+}
+
+export interface NaverLatestEpisode {
+  // 회차 제목("182화")의 숫자. 숫자가 없으면 네이버 내부 회차 번호로 대신한다
+  episode: number | null;
+  // 네이버 표기 그대로 ("26.11.10")
+  publishedAt: string | null;
 }
 
 export interface NaverWebtoonCrawlResult {
@@ -90,6 +98,30 @@ export class NaverWebtoonService {
     );
     const items = details.filter((d): d is NaverWebtoon => d !== null);
     return { items, failed: titles.length - items.length };
+  }
+
+  /**
+   * 가장 최근 공개 회차. 내부 회차 번호(no)는 휴재 공지 등도 차지해 화면의 "N화"와
+   * 어긋나므로 회차 제목의 숫자를 우선한다.
+   */
+  async fetchLatestEpisode(titleId: number): Promise<NaverLatestEpisode> {
+    const data = (await this.fetchJson(
+      `${ARTICLE_LIST_URL}?titleId=${titleId}&page=1`,
+    )) as {
+      articleList?: Array<{
+        no?: number;
+        subtitle?: string;
+        serviceDateDescription?: string;
+      }>;
+    };
+    // 기본 정렬이 최신순이다
+    const latest = data.articleList?.[0];
+    if (!latest) return { episode: null, publishedAt: null };
+    const fromSubtitle = /(\d+)\s*화/.exec(latest.subtitle ?? '')?.[1];
+    return {
+      episode: fromSubtitle ? Number(fromSubtitle) : (latest.no ?? null),
+      publishedAt: latest.serviceDateDescription ?? null,
+    };
   }
 
   // 요일별 목록에는 여러 요일에 연재되는 작품이 중복으로 들어 있다

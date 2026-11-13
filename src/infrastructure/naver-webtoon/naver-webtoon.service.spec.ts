@@ -31,6 +31,7 @@ class FakeNaver {
   > = {};
   readonly details = new Map<number, Response[]>();
   readonly calls = new Map<number, number>();
+  readonly episodes = new Map<number, unknown>();
 
   install(): void {
     globalThis.fetch = (input: RequestInfo | URL): Promise<Response> =>
@@ -43,6 +44,9 @@ class FakeNaver {
       return json({ titleListMap: this.titleListMap });
     }
     const titleId = Number(target.searchParams.get('titleId'));
+    if (target.pathname.endsWith('/article/list')) {
+      return json(this.episodes.get(titleId) ?? {});
+    }
     this.calls.set(titleId, (this.calls.get(titleId) ?? 0) + 1);
     const queue = this.details.get(titleId) ?? [];
     return queue.length > 1 ? queue.shift()! : (queue[0] ?? json({}, 404));
@@ -173,5 +177,31 @@ describe('NaverWebtoonService', () => {
 
     expect(result.items[0]?.favoriteCount).toBe(7);
     expect(naver.calls.get(1)).toBe(3);
+  });
+
+  describe('fetchLatestEpisode', () => {
+    it('회차 제목의 숫자를 쓰고, 없으면 내부 회차 번호로 대신한다', async () => {
+      naver.episodes.set(1, {
+        articleList: [
+          { no: 188, subtitle: '182화', serviceDateDescription: '26.11.10' },
+        ],
+      });
+      naver.episodes.set(2, {
+        articleList: [{ no: 51, subtitle: '에필로그' }],
+      });
+
+      expect(await service.fetchLatestEpisode(1)).toEqual({
+        episode: 182,
+        publishedAt: '26.11.10',
+      });
+      expect(await service.fetchLatestEpisode(2)).toEqual({
+        episode: 51,
+        publishedAt: null,
+      });
+      expect(await service.fetchLatestEpisode(3)).toEqual({
+        episode: null,
+        publishedAt: null,
+      });
+    });
   });
 });

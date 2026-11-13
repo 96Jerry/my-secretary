@@ -24,6 +24,7 @@ import { PreferenceModule } from './modules/preference/preference.module.js';
 import { ScheduleDomainModule } from './modules/schedule/schedule.module.js';
 import { SituationModule } from './modules/situation/situation.module.js';
 import { UserModule } from './modules/user/user.module.js';
+import { WebtoonLogModule } from './modules/webtoon-log/webtoon-log.module.js';
 import { WebtoonRankingModule } from './modules/webtoon-ranking/webtoon-ranking.module.js';
 import { ProfilerModule } from '@infra/profiler/profiler.module.js';
 
@@ -54,6 +55,7 @@ import { ProfilerModule } from '@infra/profiler/profiler.module.js';
     PalworldNewsModule,
     CgvImaxModule,
     WebtoonRankingModule,
+    WebtoonLogModule,
     SchedulerModule,
     ProfilerModule,
   ],
