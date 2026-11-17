@@ -1,6 +1,7 @@
 // 진입점: 공통 영역(헤더·탭·장르 칩)을 그리고 이벤트를 연결한다
 import { $, el, showError } from './dom.js';
 import { fmt } from './format.js';
+import { loadGames, renderGames } from './games.js';
 import { loadLogs, openPanel, renderLogs } from './logs.js';
 import { applyPreset, loadMovers, renderMovers } from './movers.js';
 import { loadRanking, renderRanking } from './ranking.js';
@@ -16,9 +17,11 @@ function render() {
   document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === state.view)));
   $('moverControls').hidden = state.view !== 'movers';
   $('logControls').hidden = state.view !== 'logs';
-  $('genres').hidden = state.view === 'logs';
+  $('gameControls').hidden = state.view !== 'games';
+  $('genres').hidden = state.view === 'logs' || state.view === 'games';
+  $('search').hidden = state.view === 'games';
   $('sort').hidden = state.view !== 'ranking';
-  $('mine').hidden = state.view === 'logs' || !state.logs?.length;
+  $('mine').hidden = state.view === 'logs' || state.view === 'games' || !state.logs?.length;
   if (!$('naverTitles').childElementCount) {
     $('naverTitles').replaceChildren(...r.items.map((w) => el('option', { value: w.titleName })));
   }
@@ -31,7 +34,8 @@ function render() {
 
   if (state.view === 'ranking') renderRanking();
   else if (state.view === 'movers') renderMovers();
-  else renderLogs();
+  else if (state.view === 'logs') renderLogs();
+  else renderGames();
 }
 setRender(render);
 
@@ -41,6 +45,8 @@ document.querySelectorAll('.tabs button').forEach((b) => {
     state.open = null;
     // 처음엔 날짜 목록부터 받아야 기본 기간(7일)을 계산할 수 있다
     if (state.view === 'movers' && !state.movers) loadMovers().then(() => applyPreset(state.preset)).catch(showError);
+    // 플레이 시간은 계속 늘어나므로 탭을 열 때마다 새로 받는다
+    if (state.view === 'games') loadGames().catch(showError);
     render();
   };
 });

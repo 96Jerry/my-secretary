@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
   validateSync,
@@ -76,6 +77,15 @@ export class EnvironmentVariables {
 
   @IsString()
   DISCORD_BOT_TOKEN!: string;
+
+  // 게임 시간을 기록할 디스코드 사용자 ID. 미설정 시 기록 비활성화
+  // 설정하려면 개발자 포털 Bot 설정에서 PRESENCE INTENT를 먼저 켤 것
+  @Transform(({ value }: { value: unknown }) =>
+    value === '' ? undefined : value,
+  )
+  @Matches(/^\d{17,20}$/)
+  @IsOptional()
+  DISCORD_GAME_USER_ID?: string;
 
   // 미설정 시 디스코드 알림 비활성화 (로컬/테스트 편의)
   @IsString()

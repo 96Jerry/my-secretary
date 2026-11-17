@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { FridgeModule } from '@modules/fridge/fridge.module.js';
+import { GameLogModule } from '@modules/game-log/game-log.module.js';
 import { HealthModule } from '@modules/health/health.module.js';
 import { MealLogModule } from '@modules/meal-log/meal-log.module.js';
 import { PreferenceModule } from '@modules/preference/preference.module.js';
@@ -15,6 +16,7 @@ import { IntentParserService } from './intent-parser.service.js';
   imports: [
     ClaudeModule,
     FridgeModule,
+    GameLogModule,
     HealthModule,
     PreferenceModule,
     ScheduleDomainModule,

@@ -10,12 +10,14 @@ import {
   GatewayIntentBits,
   type Guild,
   Message,
+  Status,
   TextChannel,
 } from 'discord.js';
 
 import { EnvironmentVariables } from '@config/index.js';
 import type { FridgeChange } from '@modules/fridge/domain/fridge-change.js';
 import { FridgeService } from '@modules/fridge/service/fridge.service.js';
+import { GameLogService } from '@modules/game-log/service/game-log.service.js';
 import { HealthService } from '@modules/health/service/health.service.js';
 import type { MealSlot } from '@modules/meal-log/domain/meal-log.entity.js';
 import { MealLogService } from '@modules/meal-log/service/meal-log.service.js';
@@ -25,6 +27,7 @@ import { SituationService } from '@modules/situation/service/situation.service.j
 import { User } from '@modules/user/domain/user.entity.js';
 import { UserService } from '@modules/user/service/user.service.js';
 import { todayKstDate } from '../time/kst-date.js';
+import { playingActivities } from './playing-activities.js';
 import { previewDataChanges, previewFridgeChanges } from './change-preview.js';
 import {
   IntentContext,
@@ -73,6 +76,9 @@ const PROMPTS: Record<Category, string> = {
     '오늘 일정을 알려주세요 (수면, 약속, 운동). 예: `7시 기상 23시 취침, 14시 회의, 저녁 7시 운동`',
 };
 
+// 게임 중인 세션의 "아직 하는 중" 확인 주기
+const GAME_HEARTBEAT_MS = 5 * 60_000;
+
 const AFFIRMATIVE =
   /^(예|네|응|어|ㅇㅇ|맞아|맞음|좋아|좋습니다|ok|yes|y)\s*[.!]*$/i;
 const NEGATIVE = /^(아니|아니야|아니오|아뇨|싫어|취소|no|n)\s*[.!]*$/i;
@@ -83,6 +89,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   private client!: Client;
   private readonly botChannelByGuild = new Map<string, string>();
   private readonly pendingByGuild = new Map<string, PendingUpdate>();
+  private gameHeartbeat?: NodeJS.Timeout;
 
   constructor(
     private readonly env: EnvironmentVariables,
@@ -94,6 +101,7 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
     private readonly situationService: SituationService,
     private readonly mealLogService: MealLogService,
     private readonly intentParser: IntentParserService,
+    private readonly gameLogService: GameLogService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -102,8 +110,14 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        // 개발자 포털에서 PRESENCE INTENT를 켜지 않고 요청하면 로그인이 거부되므로 설정했을 때만
+        ...(this.env.DISCORD_GAME_USER_ID
+          ? [GatewayIntentBits.GuildPresences]
+          : []),
       ],
     });
+
+    if (this.env.DISCORD_GAME_USER_ID) this.trackGames();
 
     this.client.once('clientReady', (c) => {
       this.logger.log(`Discord 봇 로그인: ${c.user.tag}`);
@@ -167,7 +181,39 @@ export class DiscordService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
+    clearInterval(this.gameHeartbeat);
     await this.client?.destroy();
+  }
+
+  private trackGames(): void {
+    const userId = this.env.DISCORD_GAME_USER_ID;
+    const fail = (e: unknown) =>
+      this.logger.error(`게임 기록 실패: ${(e as Error).message}`, e);
+
+    this.client.on('presenceUpdate', (_old, presence) => {
+      if (presence.userId !== userId) return;
+      this.gameLogService.sync(playingActivities(presence)).catch(fail);
+    });
+
+    // 처음 연결되거나 끊겼다 다시 붙으면 그사이 바뀐 상태를 맞춘다
+    this.client.on('shardReady', () => {
+      const presence = this.client.guilds.cache
+        .map((g) => g.presences.cache.get(userId!))
+        .find((p) => p);
+      if (!this.client.guilds.cache.some((g) => g.members.cache.has(userId!))) {
+        this.logger.warn(
+          '게임 기록 대상이 봇과 같은 서버에 없거나 아직 확인되지 않음',
+        );
+      }
+      this.gameLogService
+        .sync(playingActivities(presence), new Date(), { afterDowntime: true })
+        .catch(fail);
+    });
+
+    this.gameHeartbeat = setInterval(() => {
+      if (this.client.ws.status !== Status.Ready) return;
+      this.gameLogService.heartbeat().catch(fail);
+    }, GAME_HEARTBEAT_MS);
   }
 
   private async onGuildJoined(guild: Guild): Promise<void> {

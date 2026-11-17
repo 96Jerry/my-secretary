@@ -22,6 +22,7 @@
     <button role="tab" data-view="ranking" aria-selected="true">순위</button>
     <button role="tab" data-view="movers" aria-selected="false">급상승</button>
     <button role="tab" data-view="logs" aria-selected="false">내 기록</button>
+    <button role="tab" data-view="games" aria-selected="false">게임</button>
   </div>
 
   <div class="controls">
@@ -57,6 +58,14 @@
     </div>
     <div id="logPanel"></div>
     <div class="chips" id="logStatuses"></div>
+  </div>
+
+  <div id="gameControls" hidden>
+    <div class="controls period">
+      <span>기간</span>
+      <span class="chips inline" id="gamePresets"></span>
+    </div>
+    <div id="gameSummary"></div>
   </div>
 
   <div class="chips" id="genres"></div>

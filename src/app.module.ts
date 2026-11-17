@@ -15,6 +15,7 @@ import { MailModule } from './infrastructure/mail/mail.module.js';
 import { SchedulerModule } from './infrastructure/scheduler/scheduler.module.js';
 import { CgvImaxModule } from './modules/cgv-imax/cgv-imax.module.js';
 import { FridgeModule } from './modules/fridge/fridge.module.js';
+import { GameLogModule } from './modules/game-log/game-log.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { MealLogModule } from './modules/meal-log/meal-log.module.js';
 import { MealPlanModule } from './modules/meal-plan/meal-plan.module.js';
@@ -56,6 +57,7 @@ import { ProfilerModule } from '@infra/profiler/profiler.module.js';
     CgvImaxModule,
     WebtoonRankingModule,
     WebtoonLogModule,
+    GameLogModule,
     SchedulerModule,
     ProfilerModule,
   ],

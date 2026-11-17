@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { ago, pct, shiftDate } from '../../public/assets/js/format.js';
+import { ago, duration, pct, shiftDate, timeRange } from '../../public/assets/js/format.js';
 import {
   naverIdFromUrl,
   parseBulk,
@@ -88,5 +88,20 @@ describe('format', () => {
     assert.equal(pct(0.5), '+50.0%');
     assert.equal(pct(0.0005), '+0.05%');
     assert.equal(pct(-0.2), '-20.0%');
+  });
+});
+
+describe('duration·timeRange', () => {
+  it('초를 시간·분으로 읽기 쉽게 바꾼다', () => {
+    assert.equal(duration(30), '1분 미만');
+    assert.equal(duration(25 * 60), '25분');
+    assert.equal(duration(2 * 3600), '2시간');
+    assert.equal(duration(2 * 3600 + 5 * 60), '2시간 5분');
+  });
+
+  it('KST 기준으로 시각을 보여 주고 진행 중이면 지금으로 끝낸다', () => {
+    const r = timeRange('2026-11-17T11:30:00Z', '2026-11-17T13:00:00Z');
+    assert.match(r, /20:30 – 22:00$/);
+    assert.match(timeRange('2026-11-17T11:30:00Z', null), /20:30 – 지금$/);
   });
 });

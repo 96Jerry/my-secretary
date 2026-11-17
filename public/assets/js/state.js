@@ -15,6 +15,7 @@ export const state = {
   view: 'ranking', ranking: null, movers: null, genre: '', query: '', desc: true,
   mode: 'delta', preset: 1, from: '', to: '', minFavorites: readMin(), open: null,
   logs: null, logStatus: '', logSort: 'stale', mine: 'all',
+  games: null, gameDays: 7,
   // null | { mode: 'edit', log } | { mode: 'bulk', text, rows, error }
   panel: null,
 };

@@ -95,3 +95,6 @@ textarea { font: inherit; border: 1px solid var(--line); border-radius: 8px; bac
 .scroll-x { overflow-x: auto; }
 .chips.inline { margin: 0; }
 .toolbar { margin-bottom: 12px; }
+.chart .bar { fill: var(--accent); }
+#gameSummary .panel { gap: 6px; }
+#gameSummary .info { color: var(--muted); font-size: 13px; }
