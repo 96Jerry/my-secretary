@@ -11,8 +11,9 @@ function readMin() {
 }
 export function saveMin(v) { try { localStorage.setItem('minFavorites', String(v)); } catch { /* 저장 못 해도 동작엔 지장 없다 */ } }
 
+// 주소로 복원되는 값(view, genre, mode 등)은 main.js가 시작할 때 route.js로 덮어쓴다
 export const state = {
-  view: 'ranking', ranking: null, movers: null, genre: '', query: '', desc: true,
+  view: 'ranking', lastWebtoon: 'ranking', ranking: null, movers: null, genre: '', query: '', desc: true,
   mode: 'delta', preset: 1, from: '', to: '', minFavorites: readMin(), open: null,
   logs: null, logStatus: '', logSort: 'stale', mine: 'all',
   games: null, gameDays: 7,

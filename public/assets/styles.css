@@ -1,13 +1,13 @@
 :root {
   --bg: #f7f7f8; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73;
   --line: #e5e5ea; --accent: #00c73c; --accent-text: #fff; --chip: #efeff2;
-  --up: #d93a3a; --down: #2f6fdb;
+  --up: #d93a3a; --down: #2f6fdb; --brand: #3d5afe;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #111113; --surface: #1c1c1f; --text: #f2f2f4; --muted: #9a9aa0;
     --line: #2c2c31; --accent: #00c73c; --accent-text: #0b0b0c; --chip: #26262b;
-    --up: #ff6b6b; --down: #6aa0ff;
+    --up: #ff6b6b; --down: #6aa0ff; --brand: #5b74ff;
   }
 }
 * { box-sizing: border-box; }
@@ -18,8 +18,14 @@ body {
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-h1 { margin: 0; font-size: 22px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand img { display: block; border-radius: 7px; }
+h1 { margin: 0; font-size: 20px; letter-spacing: -.01em; }
+.sections { display: flex; gap: 6px; margin-top: 16px; }
+.sections a { padding: 6px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; background: var(--chip); }
+.sections a[aria-current=true] { background: var(--brand); color: #fff; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.topbar .meta { margin-top: 0; }
 .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
 button, select, input {
   font: inherit; border: 1px solid var(--line); border-radius: 8px;
@@ -28,7 +34,7 @@ button, select, input {
 button { cursor: pointer; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 button:disabled { opacity: .55; cursor: progress; }
-.tabs { display: flex; gap: 4px; margin-top: 20px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--line); }
 .tabs button { border: 0; border-radius: 0; background: none; padding: 8px 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs button[aria-selected=true] { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
 .controls { display: flex; gap: 8px; margin: 16px 0 12px; flex-wrap: wrap; align-items: center; }

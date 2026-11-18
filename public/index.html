@@ -3,29 +3,42 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>웹툰 찜 순위</title>
+<title>My Secretary</title>
+<meta name="theme-color" content="#3d5afe">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="비서">
 <link rel="stylesheet" href="/assets/styles.css">
 <script type="module" src="/assets/js/main.js"></script>
 </head>
 <body>
 <main>
-  <header>
-    <div>
-      <h1>네이버 웹툰 찜 순위</h1>
-      <div class="meta" id="meta">불러오는 중…</div>
-    </div>
-    <button class="primary" id="refresh">지금 수집</button>
+  <header class="brand">
+    <a href="#/webtoon/ranking"><img src="/icons/icon.svg" alt="" width="28" height="28"></a>
+    <h1>My Secretary</h1>
   </header>
+
+  <nav class="sections" aria-label="기능">
+    <a href="#/webtoon/ranking" data-section="webtoon">웹툰</a>
+    <a href="#/games" data-section="games">게임</a>
+  </nav>
+
+  <div id="webtoonSection">
+    <div class="tabs" role="tablist">
+      <button role="tab" data-view="ranking" aria-selected="true">찜 순위</button>
+      <button role="tab" data-view="movers" aria-selected="false">급상승</button>
+      <button role="tab" data-view="logs" aria-selected="false">내 기록</button>
+    </div>
+    <div class="topbar" id="rankingBar">
+      <div class="meta" id="meta">불러오는 중…</div>
+      <button class="primary" id="refresh">지금 수집</button>
+    </div>
+  </div>
   <div id="status"></div>
 
-  <div class="tabs" role="tablist">
-    <button role="tab" data-view="ranking" aria-selected="true">순위</button>
-    <button role="tab" data-view="movers" aria-selected="false">급상승</button>
-    <button role="tab" data-view="logs" aria-selected="false">내 기록</button>
-    <button role="tab" data-view="games" aria-selected="false">게임</button>
-  </div>
-
-  <div class="controls">
+  <div class="controls" id="searchControls">
     <input type="search" id="search" placeholder="제목·작가 검색">
     <button id="sort" title="정렬 방향 바꾸기">찜 많은 순 ↓</button>
     <select id="mine" aria-label="내 기록 필터" hidden>
