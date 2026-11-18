@@ -275,10 +275,10 @@ pnpm start:dev
 │ [러너] runner-runner-1        ← ~/dev/my-secretary/deploy/runner │
 │        도커 소켓으로 호스트 도커를 조작                          │
 │ [운영] 프로젝트 my-secretary     ← ~/deploy/my-secretary        │
-│        app 127.0.0.1:3100 / db 127.0.0.1:5433 (볼륨 my-secretary_pgdata)
+│        app 127.0.0.1:3000 / db 127.0.0.1:5432 (볼륨 my-secretary_pgdata)
 │ [개발] 프로젝트 my-secretary-dev ← ~/dev/my-secretary           │
-│        db 5432 (볼륨 my-secretary-dev_pgdata)                  │
-│        앱은 도커 밖에서 pnpm start:dev (3000)                   │
+│        db 127.0.0.1:5433 (볼륨 my-secretary-dev_pgdata)        │
+│        앱은 도커 밖에서 pnpm start:dev (127.0.0.1:3001)         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -298,8 +298,9 @@ pnpm start:dev
 | 폴더 구성 | `docker-compose.yaml` + `.env`만 | 소스 전체 + `docker-compose.override.yaml` |
 | compose 프로젝트 이름 | `my-secretary` | `my-secretary-dev` |
 | 앱 실행 | GHCR 이미지 컨테이너 | `pnpm start:dev` (도커 밖) |
-| 앱 포트 | 127.0.0.1:3100 | 3000 |
-| DB 포트 / 볼륨 | 127.0.0.1:5433 / `my-secretary_pgdata` | 5432 / `my-secretary-dev_pgdata` |
+| 앱 포트 | 127.0.0.1:3000 | 127.0.0.1:3001 (`PORT=3001`, `HOST=127.0.0.1`) |
+| DB 포트 / 볼륨 | 127.0.0.1:5432 / `my-secretary_pgdata` | 127.0.0.1:5433 / `my-secretary-dev_pgdata` |
+| Tailscale 주소 | `https://macmini.tail281653.ts.net` (+ `:8080` http) | `https://macmini.tail281653.ts.net:8443` (+ `:8081` http) |
 | `DB_HOST` | `db` | `localhost` |
 | 디스코드 봇 | 운영 봇 | 개발 봇 |
 | 메일 수신자 | 원래 주소 | `아이디+dev@gmail.com` |
@@ -307,7 +308,8 @@ pnpm start:dev
 
 - `docker-compose.override.yaml`은 개발 폴더에만 있다. compose가 같은 폴더에 있으면 자동으로 합쳐 읽으므로 개발에서는 이름·포트가 바뀌고, 운영 폴더에는 이 파일이 없어 기본 설정대로 돈다.
 - `.env`는 폴더마다 따로 있다. 운영 `.env`는 배포로 덮어써지지 않는다.
-- 운영 포트는 `127.0.0.1`에만 열어 맥 밖에서는 접근할 수 없다.
+- 기본 포트(3000, 5432)는 운영이 쓰고 개발은 그 옆 번호를 쓴다.
+- 운영·개발 모두 `127.0.0.1`에만 열고, 맥 밖에서는 `tailscale serve`를 거친 테일넷 주소로만 접근한다.
 - 개발에서 cron을 끄는 이유: 켜 두면 운영과 중복 실행되어 메일·Claude 호출이 두 번 나가고, 특히 CGV 조회가 두 배가 되어 같은 IP가 차단되면 운영까지 막힌다.
 
 ### 러너 (`deploy/runner/`)

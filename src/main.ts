@@ -19,7 +19,7 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(env.PORT);
+  await app.listen(env.PORT, env.HOST);
 }
 
 void bootstrap();

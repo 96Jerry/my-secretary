@@ -37,6 +37,11 @@ export class EnvironmentVariables {
   @IsOptional()
   PORT: number = 3000;
 
+  // 컨테이너 안에서는 모든 주소로 받아야 포트 연결이 된다. 도커 밖 개발 서버는 127.0.0.1로 좁힌다
+  @IsString()
+  @IsOptional()
+  HOST: string = '0.0.0.0';
+
   @IsString()
   DB_HOST!: string;
 

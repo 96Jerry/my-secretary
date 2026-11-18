@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>My Secretary</title>
 <meta name="theme-color" content="#3d5afe">
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
@@ -15,26 +15,20 @@
 </head>
 <body>
 <main>
-  <header class="brand">
-    <a href="#/webtoon/ranking"><img src="/icons/icon.svg" alt="" width="28" height="28"></a>
-    <h1>My Secretary</h1>
+  <header class="top">
+    <a class="brand" href="#/content/webtoon/ranking">
+      <img src="/icons/icon.svg" alt="" width="28" height="28">
+      <h1>My Secretary</h1>
+    </a>
+    <!-- 넓은 화면에선 머리글 오른쪽, 좁은 화면에선 하단 탭 바 -->
+    <nav class="sections" id="sections" aria-label="영역"></nav>
   </header>
 
-  <nav class="sections" aria-label="기능">
-    <a href="#/webtoon/ranking" data-section="webtoon">웹툰</a>
-    <a href="#/games" data-section="games">게임</a>
-  </nav>
-
-  <div id="webtoonSection">
-    <div class="tabs" role="tablist">
-      <button role="tab" data-view="ranking" aria-selected="true">찜 순위</button>
-      <button role="tab" data-view="movers" aria-selected="false">급상승</button>
-      <button role="tab" data-view="logs" aria-selected="false">내 기록</button>
-    </div>
-    <div class="topbar" id="rankingBar">
-      <div class="meta" id="meta">불러오는 중…</div>
-      <button class="primary" id="refresh">지금 수집</button>
-    </div>
+  <div class="kinds" id="kinds"></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="topbar" id="rankingBar">
+    <div class="meta" id="meta">불러오는 중…</div>
+    <button class="primary" id="refresh">지금 수집</button>
   </div>
   <div id="status"></div>
 

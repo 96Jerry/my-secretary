@@ -5,10 +5,45 @@ import { loadGames, renderGames } from './games.js';
 import { loadLogs, openPanel, renderLogs } from './logs.js';
 import { applyPreset, loadMovers, renderMovers } from './movers.js';
 import { loadRanking, renderRanking } from './ranking.js';
-import { parseRoute, routeOf, SECTION_OF } from './route.js';
+import { parseRoute, routeOf, SECTIONS, sectionOf, titleOf, VIEWS } from './route.js';
 import { setRender, state } from './state.js';
 
-const TITLES = { ranking: '웹툰 찜 순위', movers: '웹툰 급상승', logs: '내 웹툰 기록', games: '게임 시간' };
+const ICONS = {
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  gamepad: '<rect x="2" y="6" width="20" height="12" rx="6"/><path d="M6 12h4M8 10v4M15 11h.01M18 13h.01"/>',
+};
+
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = ICONS[name];
+  return svg;
+}
+
+// 영역 메뉴, 종류, 탭을 route.js 구성대로 그린다
+function renderNav() {
+  const { section, kind } = VIEWS[state.view];
+  $('sections').replaceChildren(...SECTIONS.map((s) => el('a', {
+    href: '#' + VIEWS[s.kinds[0].tabs[0].view].path,
+    'aria-current': String(s === section),
+    onclick: (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+      e.preventDefault();
+      go(state.lastView[s.key] ?? s.kinds[0].tabs[0].view);
+    },
+  }, icon(s.icon), el('span', {}, s.label))));
+
+  // 종류가 하나뿐이면 고르는 버튼 대신 제목으로 보여 준다
+  const kinds = section.kinds.filter((k) => k.key);
+  $('kinds').replaceChildren(...(kinds.length > 1
+    ? kinds.map((k) => el('button', { 'aria-pressed': String(k === kind), onclick: () => go(k.tabs[0].view) }, k.label))
+    : [el('h2', {}, kind.label ?? section.label)]));
+
+  $('tabs').replaceChildren(...kind.tabs.map((t) => el('button', {
+    role: 'tab', 'aria-selected': String(t.view === state.view), onclick: () => go(t.view),
+  }, t.label)));
+}
 
 // 화면 상태를 주소에 반영한다. 탭이 바뀌면 방문 기록을 남겨 뒤로 가기가 되고, 필터만 바뀌면 덮어쓴다
 function syncUrl() {
@@ -21,25 +56,23 @@ function syncUrl() {
 function render() {
   syncUrl();
   const v = state.view;
-  if (SECTION_OF[v] === 'webtoon') state.lastWebtoon = v;
-  document.title = `${TITLES[v]} · My Secretary`;
-  document.querySelectorAll('.sections a').forEach((a) => a.setAttribute('aria-current', String(a.dataset.section === SECTION_OF[v])));
-  document.querySelectorAll('.tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === v)));
-  $('webtoonSection').hidden = SECTION_OF[v] !== 'webtoon';
-  $('rankingBar').hidden = v === 'logs';
+  state.lastView[sectionOf(v).key] = v;
+  document.title = `${titleOf(v)} · My Secretary`;
+  renderNav();
+  $('rankingBar').hidden = v !== 'ranking' && v !== 'movers';
   $('moverControls').hidden = v !== 'movers';
   $('logControls').hidden = v !== 'logs';
-  $('gameControls').hidden = v !== 'games';
-  $('searchControls').hidden = v === 'games';
-  $('genres').hidden = v === 'logs' || v === 'games';
+  $('gameControls').hidden = v !== 'playtime';
+  $('searchControls').hidden = v === 'playtime';
+  $('genres').hidden = v !== 'ranking' && v !== 'movers';
   $('sort').hidden = v !== 'ranking';
-  $('mine').hidden = v === 'logs' || v === 'games' || !state.logs?.length;
+  $('mine').hidden = (v !== 'ranking' && v !== 'movers') || !state.logs?.length;
   // 주소에서 복원한 값을 입력칸에도 보여 준다
   if ($('search').value !== state.query) $('search').value = state.query;
   $('logSort').value = state.logSort;
   $('mine').value = state.mine;
 
-  if (v === 'games') { renderGames(); return; }
+  if (v === 'playtime') { renderGames(); return; }
 
   const r = state.ranking;
   if (!r) return;
@@ -71,7 +104,7 @@ function enterView() {
     else loadMovers().then(() => applyPreset(state.preset)).catch(showError);
   }
   // 플레이 시간은 계속 늘어나므로 들어올 때마다 새로 받는다
-  if (state.view === 'games') loadGames().catch(showError);
+  if (state.view === 'playtime') loadGames().catch(showError);
 }
 
 function go(view) {
@@ -92,15 +125,6 @@ function applyUrl() {
 }
 window.addEventListener('popstate', applyUrl);
 
-// 웹툰 메뉴는 마지막으로 보던 웹툰 탭으로 돌아간다. href는 새 탭으로 열 때만 쓰인다
-document.querySelectorAll('.sections a').forEach((a) => {
-  a.onclick = (e) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey) return;
-    e.preventDefault();
-    go(a.dataset.section === 'webtoon' ? state.lastWebtoon : 'games');
-  };
-});
-document.querySelectorAll('.tabs button').forEach((b) => { b.onclick = () => go(b.dataset.view); });
 $('mine').onchange = (e) => { state.mine = e.target.value; render(); };
 $('logSort').onchange = (e) => { state.logSort = e.target.value; render(); };
 $('addLog').onclick = () => openPanel({ mode: 'edit', log: null });

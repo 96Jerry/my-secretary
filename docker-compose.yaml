@@ -6,9 +6,9 @@ services:
     build: .
     restart: unless-stopped
     env_file: .env
-    # 운영 기준. 개발은 3000을 쓰도록 3100으로 비켜 두고, 맥미니 밖에서는 접근하지 못하게 한다
+    # 기본 포트는 운영이 쓴다(개발은 3001). 맥미니 밖에서는 tailscale serve로만 접근한다
     ports:
-      - "127.0.0.1:3100:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - db
 
@@ -19,9 +19,9 @@ services:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    # 개발 DB가 5432를 쓰므로 운영은 5433으로 비켜 둔다
+    # 기본 포트는 운영이 쓴다(개발 DB는 5433)
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 

@@ -1,14 +1,49 @@
-// 주소 해시(#/webtoon/movers?mode=rate)와 화면 상태를 오간다. 새로고침·뒤로 가기·링크 공유용. DOM을 쓰지 않는다
+// 메뉴 구성과 주소 해시(#/content/webtoon/movers?mode=rate) ↔ 화면 상태 변환. DOM을 쓰지 않는다
 import { STATUSES } from './labels.js';
 
-// 서버 API(/games 등)와 겹치지 않도록 화면 주소는 해시로만 표현한다
-export const PATHS = {
-  ranking: '/webtoon/ranking',
-  movers: '/webtoon/movers',
-  logs: '/webtoon/logs',
-  games: '/games',
+// 영역 → 종류 → 탭. 기능이 늘면 여기에 추가한다. 종류가 없는 영역은 kind를 null로 둔다
+export const SECTIONS = [
+  {
+    key: 'content', label: '콘텐츠', icon: 'book',
+    kinds: [{
+      key: 'webtoon', label: '웹툰',
+      tabs: [
+        { view: 'ranking', slug: 'ranking', label: '찜 순위' },
+        { view: 'movers', slug: 'movers', label: '급상승' },
+        { view: 'logs', slug: 'logs', label: '내 기록' },
+      ],
+    }],
+  },
+  {
+    key: 'game', label: '게임', icon: 'gamepad',
+    kinds: [{ key: null, label: null, tabs: [{ view: 'playtime', slug: 'playtime', label: '플레이 시간' }] }],
+  },
+];
+
+// view → { section, kind, tab, path }
+export const VIEWS = {};
+for (const section of SECTIONS) {
+  for (const kind of section.kinds) {
+    for (const tab of kind.tabs) {
+      VIEWS[tab.view] = { section, kind, tab, path: '/' + [section.key, kind.key, tab.slug].filter(Boolean).join('/') };
+    }
+  }
+}
+
+// 영역·종류까지만 적은 주소와 예전 주소(북마크)도 받아 준다
+const ALIASES = { '/webtoon': 'ranking', '/webtoon/ranking': 'ranking', '/webtoon/movers': 'movers', '/webtoon/logs': 'logs', '/games': 'playtime' };
+for (const section of SECTIONS) {
+  ALIASES['/' + section.key] ??= section.kinds[0].tabs[0].view;
+  for (const kind of section.kinds) {
+    if (kind.key) ALIASES[`/${section.key}/${kind.key}`] ??= kind.tabs[0].view;
+  }
+}
+
+export const sectionOf = (view) => VIEWS[view].section;
+export const titleOf = (view) => {
+  const { section, kind, tab } = VIEWS[view];
+  return `${kind.label ?? section.label} ${tab.label}`;
 };
-export const SECTION_OF = { ranking: 'webtoon', movers: 'webtoon', logs: 'webtoon', games: 'games' };
 
 const MODES = ['delta', 'rate', 'drop', 'entered', 'exited'];
 const LOG_SORTS = ['stale', 'recent', 'unread', 'title'];
@@ -22,15 +57,19 @@ export const DEFAULTS = {
   logStatus: '', logSort: 'stale', gameDays: 7,
 };
 
+function viewOf(path) {
+  const found = Object.keys(VIEWS).find((v) => VIEWS[v].path === path);
+  return found ?? ALIASES[path] ?? DEFAULTS.view;
+}
+
 /** 해시 → 상태 조각. 모르는 값은 기본값으로 */
 export function parseRoute(hash) {
   const [rawPath, query = ''] = String(hash).replace(/^#/, '').split('?');
-  const path = rawPath.replace(/\/+$/, '');
+  const view = viewOf(rawPath.replace(/\/+$/, ''));
   const p = new URLSearchParams(query);
-  const view = Object.keys(PATHS).find((v) => PATHS[v] === path) ?? 'ranking';
   const s = { ...DEFAULTS, view };
   const q = p.get('q');
-  if (q) s.query = q.slice(0, 100);
+  if (q && view !== 'playtime') s.query = q.slice(0, 100);
 
   if (view === 'ranking' || view === 'movers') {
     const genre = p.get('genre');
@@ -50,7 +89,7 @@ export function parseRoute(hash) {
     if (Object.hasOwn(STATUSES, p.get('status') ?? '')) s.logStatus = p.get('status');
     if (LOG_SORTS.includes(p.get('sort'))) s.logSort = p.get('sort');
   }
-  if (view === 'games' && GAME_DAYS.includes(p.get('days'))) {
+  if (view === 'playtime' && GAME_DAYS.includes(p.get('days'))) {
     s.gameDays = p.get('days') === 'all' ? null : Number(p.get('days'));
   }
   return s;
@@ -60,9 +99,7 @@ export function parseRoute(hash) {
 export function routeOf(state) {
   const p = new URLSearchParams();
   const v = state.view;
-  if (v === 'ranking' || v === 'movers') {
-    if (state.genre) p.set('genre', state.genre);
-  }
+  if ((v === 'ranking' || v === 'movers') && state.genre) p.set('genre', state.genre);
   if (v === 'ranking' && !state.desc) p.set('sort', 'asc');
   if (v === 'movers') {
     if (state.mode !== DEFAULTS.mode) p.set('mode', state.mode);
@@ -76,10 +113,10 @@ export function routeOf(state) {
     if (state.logStatus) p.set('status', state.logStatus);
     if (state.logSort !== DEFAULTS.logSort) p.set('sort', state.logSort);
   }
-  if (v === 'games' && state.gameDays !== DEFAULTS.gameDays) {
+  if (v === 'playtime' && state.gameDays !== DEFAULTS.gameDays) {
     p.set('days', state.gameDays === null ? 'all' : String(state.gameDays));
   }
-  if (v !== 'games' && state.query.trim()) p.set('q', state.query.trim());
+  if (v !== 'playtime' && state.query.trim()) p.set('q', state.query.trim());
   const qs = p.toString();
-  return '#' + PATHS[v] + (qs ? '?' + qs : '');
+  return '#' + VIEWS[v].path + (qs ? '?' + qs : '');
 }

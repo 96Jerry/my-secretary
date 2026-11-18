@@ -6,13 +6,14 @@ services:
   app:
     # 운영이 받아 둔 GHCR 이미지를 쓰지 않고 로컬에서 빌드한 이미지를 쓴다
     image: my-secretary:dev
+    # 기본 포트(3000)는 운영이 쓰므로 개발은 3001
     ports: !override
-      - "3000:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       # .env의 DB_HOST=localhost는 pnpm start:dev용. 컨테이너 안에서는 서비스 이름으로 접속
       DB_HOST: db
 
   db:
-    # pnpm start:dev에서 접속할 수 있도록 개발 DB만 포트를 연다
+    # pnpm start:dev에서 접속할 수 있도록 연다. 기본 포트(5432)는 운영이 쓰므로 5433
     ports: !override
-      - "5432:5432"
+      - "127.0.0.1:5433:5432"

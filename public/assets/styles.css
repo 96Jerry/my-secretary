@@ -1,12 +1,12 @@
 :root {
   --bg: #f7f7f8; --surface: #fff; --text: #1d1d1f; --muted: #6e6e73;
-  --line: #e5e5ea; --accent: #00c73c; --accent-text: #fff; --chip: #efeff2;
+  --line: #e5e5ea; --accent: #3d5afe; --accent-text: #fff; --chip: #efeff2;
   --up: #d93a3a; --down: #2f6fdb; --brand: #3d5afe;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #111113; --surface: #1c1c1f; --text: #f2f2f4; --muted: #9a9aa0;
-    --line: #2c2c31; --accent: #00c73c; --accent-text: #0b0b0c; --chip: #26262b;
+    --line: #2c2c31; --accent: #5b74ff; --accent-text: #fff; --chip: #26262b;
     --up: #ff6b6b; --down: #6aa0ff; --brand: #5b74ff;
   }
 }
@@ -18,12 +18,32 @@ body {
   font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
-.brand { display: flex; align-items: center; gap: 10px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
 .brand img { display: block; border-radius: 7px; }
 h1 { margin: 0; font-size: 20px; letter-spacing: -.01em; }
-.sections { display: flex; gap: 6px; margin-top: 16px; }
-.sections a { padding: 6px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; background: var(--chip); }
+.sections { display: flex; gap: 4px; }
+.sections a { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px; }
+.sections a:hover { background: var(--chip); }
 .sections a[aria-current=true] { background: var(--brand); color: #fff; }
+.sections svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.kinds { display: flex; gap: 6px; align-items: center; margin-top: 20px; }
+.kinds h2 { margin: 0; font-size: 18px; }
+.kinds button { background: var(--chip); border-color: transparent; border-radius: 999px; padding: 4px 14px; font-weight: 600; }
+.kinds button[aria-pressed=true] { background: var(--text); color: var(--bg); }
+/* 좁은 화면에선 영역 메뉴를 앱처럼 하단 탭 바로 */
+@media (max-width: 640px) {
+  main { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .sections {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; gap: 0; justify-content: space-around;
+    background: var(--surface); border-top: 1px solid var(--line);
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+  .sections a { flex: 1; max-width: 120px; flex-direction: column; gap: 2px; padding: 4px; font-size: 11px; border-radius: 10px; }
+  .sections a[aria-current=true] { background: none; color: var(--brand); }
+  .sections svg { width: 22px; height: 22px; }
+  .kinds { margin-top: 14px; }
+}
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
 .topbar .meta { margin-top: 0; }
 .meta { color: var(--muted); font-size: 13px; margin-top: 4px; }
@@ -34,7 +54,7 @@ button, select, input {
 button { cursor: pointer; }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
 button:disabled { opacity: .55; cursor: progress; }
-.tabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; margin-top: 8px; border-bottom: 1px solid var(--line); }
 .tabs button { border: 0; border-radius: 0; background: none; padding: 8px 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs button[aria-selected=true] { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
 .controls { display: flex; gap: 8px; margin: 16px 0 12px; flex-wrap: wrap; align-items: center; }
