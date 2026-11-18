@@ -7,9 +7,22 @@ import { render, state } from './state.js';
 
 const PRESETS = [{ label: '오늘', days: 1 }, { label: '7일', days: 7 }, { label: '30일', days: 30 }, { label: '전체', days: null }];
 
+let seq = 0;
 export async function loadGames() {
-  state.games = await getJson('/games?days=' + (state.gameDays ?? 'all'));
+  // 기간 버튼과 자동 갱신이 겹치면 마지막 요청 결과만 쓴다
+  const mine = ++seq;
+  const data = await getJson('/games?days=' + (state.gameDays ?? 'all'));
+  if (mine !== seq) return;
+  state.games = data;
   render();
+}
+
+// 플레이 시간은 계속 늘어나므로, 화면이 보이는 동안 1분마다 새로 받고 다시 보일 때도 바로 받는다
+const AUTO_REFRESH_MS = 60_000;
+const visible = () => state.view === 'playtime' && document.visibilityState === 'visible';
+export function startGameAutoRefresh() {
+  setInterval(() => { if (visible()) loadGames().catch(() => {}); }, AUTO_REFRESH_MS);
+  document.addEventListener('visibilitychange', () => { if (visible()) loadGames().catch(() => {}); });
 }
 
 export function renderGames() {

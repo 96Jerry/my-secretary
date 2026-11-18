@@ -1,7 +1,7 @@
 // 진입점: 공통 영역(메뉴·탭·장르 칩)을 그리고 이벤트와 주소를 연결한다
 import { $, el, showError } from './dom.js';
 import { fmt } from './format.js';
-import { loadGames, renderGames } from './games.js';
+import { loadGames, renderGames, startGameAutoRefresh } from './games.js';
 import { loadLogs, openPanel, renderLogs } from './logs.js';
 import { applyPreset, loadMovers, renderMovers } from './movers.js';
 import { loadRanking, renderRanking } from './ranking.js';
@@ -124,6 +124,7 @@ function applyUrl() {
   render();
 }
 window.addEventListener('popstate', applyUrl);
+startGameAutoRefresh();
 
 $('mine').onchange = (e) => { state.mine = e.target.value; render(); };
 $('logSort').onchange = (e) => { state.logSort = e.target.value; render(); };
